@@ -1,0 +1,2 @@
+mixamorig_LeftForeArm,0,140,
+mixamorig_LeftHand,-90,90,
