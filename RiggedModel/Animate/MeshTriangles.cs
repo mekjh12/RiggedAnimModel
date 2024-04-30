@@ -35,6 +35,7 @@ namespace LSystem.Animate
                 _vertices.Add(values[i]);
             }
         }
+
         public void AddTexCoords(params uint[] values)
         {
             for (int i = 0; i < values.Length; i++)

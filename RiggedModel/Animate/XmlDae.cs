@@ -1,8 +1,10 @@
 ﻿using Assimp;
+using Assimp.Configs;
 using OpenGL;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Xml;
 
 namespace LSystem.Animate
@@ -23,6 +25,17 @@ namespace LSystem.Animate
         Dictionary<string, Bone> _dicBones;
         string[] _boneNames;
         Matrix4x4f _bindShapeMatrix;
+
+        List<Vertex3f> _vertices;
+        List<Vertex4f> _boneIndices;
+        List<Vertex4f> _boneWeights;
+
+        public List<Vertex3f> Vertices => _vertices;
+
+        public List<Vertex4f> BoneIndices => _boneIndices;
+
+        public List<Vertex4f> BoneWeights => _boneWeights;
+
 
         // 비율을 얻는다.
         float _hipScaled = 1.0f;
@@ -60,12 +73,72 @@ namespace LSystem.Animate
         public XmlDae(string filename, bool isLoadAnimation = true)
         {
             _filename = filename;
+
             List<TexturedModel> models = Load(filename, isLoadAnimation);
 
             if (_texturedModels == null)
                 _texturedModels = new List<TexturedModel>();
 
             _texturedModels.AddRange(models);
+        }
+
+        public List<TexturedModel> WearCloth(string fileName, float expandValue = 0.0001f)
+        {
+            XmlDocument xml = new XmlDocument();
+            xml.Load(fileName);
+
+            // (1) library_images = textures
+            Dictionary<string, Texture> textures = LibraryImages(xml);
+            Dictionary<string, string> materialToEffect = LoadMaterials(xml);
+            Dictionary<string, string> effectToImage = LoadEffect(xml);
+
+            // (2) library_geometries = position, normal, texcoord, color
+            List<MeshTriangles> meshes = LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
+
+            // (3) library_controllers = boneIndex, boneWeight
+            LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
+                out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight);
+
+            // (3-1) boneName, boneIndexDictionary
+            _boneNames = new string[boneNames.Count];
+            _dicBoneIndex = new Dictionary<string, int>();
+            for (int i = 0; i < boneNames.Count; i++)
+            {
+                _boneNames[i] = boneNames[i].Trim();
+                _dicBoneIndex.Add(_boneNames[i], i);
+            }
+
+            // (4) library_animations
+            bool isLoadAnimation = true;
+            if (isLoadAnimation)
+            {
+                if (_motions == null) _motions = new Dictionary<string, Motion>();
+                LibraryAnimations(xml, ref _motions);
+            }
+
+            // (5) library_visual_scenes = bone hierarchy + rootBone
+            _rootBone = LibraryVisualScenes(xml, boneNames, invBindPoses);
+
+
+            // 읽어온 정보의 인덱스를 이용하여 배열을 만든다.
+            List<TexturedModel> texturedModels = new List<TexturedModel>();
+            foreach (MeshTriangles meshTriangles in meshes)
+            {
+                _rawModel = Clothes.MergeOneTopology(lstPositions, lstTexCoord, lstBoneIndex, lstBoneWeight, meshTriangles, expandValue);
+
+                string effect = materialToEffect[meshTriangles.Material].Replace("#", "");
+                string imageName = (effectToImage[effect]);
+
+                if (textures.ContainsKey(imageName))
+                {
+                    TexturedModel texturedModel = new TexturedModel(_rawModel, textures[imageName]);
+                    texturedModel.IsDrawElement = _rawModel.IsDrawElement;
+                    texturedModel.VertexCount = _rawModel.VertexCount;
+                    texturedModels.Add(texturedModel);
+                }
+            }
+
+            return texturedModels;
         }
 
         public string AddAction(string filename)
@@ -142,6 +215,18 @@ namespace LSystem.Animate
                     boneWeights[4 * i + 1] = (float)lstBoneWeight[idx].y;
                     boneWeights[4 * i + 2] = (float)lstBoneWeight[idx].z;
                     boneWeights[4 * i + 3] = (float)lstBoneWeight[idx].w;
+                }
+
+                // 로딩한 postions, boneIndices, boneWeights를 버텍스로
+                _vertices = new List<Vertex3f>();
+                _boneIndices = new List<Vertex4f>();
+                _boneWeights = new List<Vertex4f>();
+                int vertexNum = postions.Length / 3;
+                for (int i = 0; i < vertexNum; i++)
+                {
+                    _vertices.Add(new Vertex3f(postions[i * 3 + 0], postions[i * 3 + 1], postions[i * 3 + 2]));
+                    _boneIndices.Add(new Vertex4f(boneIndices[i * 4 + 0], boneIndices[i * 4 + 1], boneIndices[i * 4 + 2], boneIndices[i * 4 + 3]));
+                    _boneWeights.Add(new Vertex4f(boneWeights[i * 4 + 0], boneWeights[i * 4 + 1], boneWeights[i * 4 + 2], boneWeights[i * 4 + 3]));
                 }
 
                 // VAO, VBO로 Raw3d 모델을 만든다.
@@ -534,6 +619,10 @@ namespace LSystem.Animate
                     bwList.Sort((a, b) => b.y.CompareTo(a.y));
                     if (bwList.Count > 4)
                     {
+                        for (int k = 4; k < bwList.Count; k++)
+                        {
+                            bwList[0] = new Vertex2f(bwList[0].x, bwList[0].y + bwList[k].y);
+                        }
                         bwList.RemoveRange(4, bwList.Count - 4);
                     }
 

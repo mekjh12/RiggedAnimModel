@@ -143,34 +143,36 @@ namespace LSystem
             shader.LoadProjMatrix(camera.ProjectiveMatrix);
             shader.LoadBoneIndex(boneIndex);
 
-            /*
-            Gl.BindVertexArray(entity.Model.VAO);
-            Gl.EnableVertexAttribArray(0);
-            Gl.EnableVertexAttribArray(1);
-            Gl.EnableVertexAttribArray(2);
-            Gl.EnableVertexAttribArray(3);
-            Gl.EnableVertexAttribArray(4);
+            foreach (TexturedModel model in entity.Models)
+            {
 
-            TexturedModel modelTextured = (TexturedModel)(entity.Model);
+                Gl.BindVertexArray(model.VAO);
+                Gl.EnableVertexAttribArray(0);
+                Gl.EnableVertexAttribArray(1);
+                Gl.EnableVertexAttribArray(2);
+                Gl.EnableVertexAttribArray(3);
+                Gl.EnableVertexAttribArray(4);
 
-            if (modelTextured.IsDrawElement)
-                Gl.DrawElements(PrimitiveType.Triangles, entity.Model.VertexCount, DrawElementsType.UnsignedInt, System.IntPtr.Zero);
-            else
-                Gl.DrawArrays(PrimitiveType.Triangles, 0, entity.Model.VertexCount);
+                if (model.IsDrawElement)
+                    Gl.DrawElements(PrimitiveType.Triangles, model.VertexCount, DrawElementsType.UnsignedInt, System.IntPtr.Zero);
+                else
+                    Gl.DrawArrays(PrimitiveType.Triangles, 0, model.VertexCount);
 
-            Gl.DisableVertexAttribArray(0);
-            Gl.DisableVertexAttribArray(1);
-            Gl.DisableVertexAttribArray(2);
-            Gl.DisableVertexAttribArray(3);
-            Gl.DisableVertexAttribArray(4);
-            Gl.BindVertexArray(0);
+                Gl.DisableVertexAttribArray(0);
+                Gl.DisableVertexAttribArray(1);
+                Gl.DisableVertexAttribArray(2);
+                Gl.DisableVertexAttribArray(3);
+                Gl.DisableVertexAttribArray(4);
+                Gl.BindVertexArray(0);
+            }
 
             shader.Unbind();
-            */
         }
 
         public static void Render(AnimateShader shader, Matrix4x4f[] jointTransforms, Matrix4x4f rootMatrix, Entity entity, Camera camera)
         {
+            if (entity == null) return;
+
             shader.Bind();
 
             shader.LoadModelMatrix(entity.ModelMatrix);
@@ -182,7 +184,6 @@ namespace LSystem
 
             foreach (TexturedModel model in entity.Models)
             {
-                Gl.PointSize(3);
                 Gl.BindVertexArray(model.VAO);
                 Gl.EnableVertexAttribArray(0);
                 Gl.EnableVertexAttribArray(1);
@@ -212,7 +213,6 @@ namespace LSystem
                 Gl.DisableVertexAttribArray(3);
                 Gl.DisableVertexAttribArray(4);
                 Gl.BindVertexArray(0);
-                Gl.PointSize(1);
             }
 
             shader.Unbind();

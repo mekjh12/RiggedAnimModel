@@ -8,6 +8,16 @@ namespace LSystem
         private static float DegreeToRadian = (float)Math.PI / 180.0f;
         private static float RadianToDegree = 180.0f / (float)Math.PI;
 
+        public static bool IsEqual(this Vertex3f a, Vertex3f b, float kEpsilon = 0.0001f)
+        {
+            return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y) + Math.Abs(a.z - b.z) < kEpsilon;
+        }
+
+        public static bool IsEqual(this Vertex2f a, Vertex2f b, float kEpsilon = 0.0001f)
+        {
+            return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y) < kEpsilon;
+        }
+
         /// <summary>
         /// 소숫점 아래의 숫자를 버린다.
         /// </summary>
@@ -33,14 +43,6 @@ namespace LSystem
             if (value > max) value = max;
             return value;
         }
-
-        public static int Clamp(this int value, int min, int max)
-        {
-            if (value < min) value = min;
-            if (value > max) value = max;
-            return value;
-        }
-
         public static Vertex4f Vertex4f(this Vertex3f a)
         {
             return new Vertex4f(a.x, a.y, a.z, 1.0f);
@@ -58,6 +60,13 @@ namespace LSystem
             float cos = (af * af + bf * bf - cf * cf) / (2 * af * bf);
             float theta = (-1 <= cos && cos <= 1) ? ((float)Math.Acos(cos)).ToDegree() : 0.0f;
             return (Matrix4x4f)new Quaternion(R, theta);
+        }
+
+        public static int Clamp(this int value, int min, int max)
+        {
+            if (value < min) value = min;
+            if (value > max) value = max;
+            return value;
         }
 
         public static Vertex3f Cross(this Vertex3f a, Vertex3f b)

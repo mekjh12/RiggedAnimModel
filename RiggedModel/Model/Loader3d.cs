@@ -54,7 +54,7 @@ namespace LSystem
         /// </summary>
         /// <param name="rotDeg">degree</param>
         /// <returns></returns>
-        public static RawModel3d LoadPlane(float rotDeg = 0)
+        public static RawModel3d LoadPlane(float rotDeg = 0, float texCoordRepeatNum = 1.0f)
         {
             float Cos(float radian) => (float)Math.Cos(radian);
             float Sin(float radian) => (float)Math.Sin(radian);
@@ -82,10 +82,10 @@ namespace LSystem
             float[] textures =
             {
                 0.0f, 0.0f,
-                1.0f, 0.0f,
-                1.0f, 1.0f,
-                1.0f, 1.0f,
-                0.0f, 1.0f,
+                texCoordRepeatNum, 0.0f,
+                texCoordRepeatNum, texCoordRepeatNum,
+                texCoordRepeatNum, texCoordRepeatNum,
+                0.0f, texCoordRepeatNum,
                 0.0f, 0.0f
             };
 

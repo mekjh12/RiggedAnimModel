@@ -56,6 +56,13 @@
             this.button10 = new System.Windows.Forms.Button();
             this.button11 = new System.Windows.Forms.Button();
             this.ckBoneParentCurrentVisible = new System.Windows.Forms.CheckBox();
+            this.button12 = new System.Windows.Forms.Button();
+            this.button13 = new System.Windows.Forms.Button();
+            this.button14 = new System.Windows.Forms.Button();
+            this.button15 = new System.Windows.Forms.Button();
+            this.button16 = new System.Windows.Forms.Button();
+            this.button17 = new System.Windows.Forms.Button();
+            this.button18 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nmChainLength)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nmIternation)).BeginInit();
             this.SuspendLayout();
@@ -70,7 +77,7 @@
             this.glControl1.Margin = new System.Windows.Forms.Padding(5, 4, 5, 4);
             this.glControl1.MultisampleBits = ((uint)(0u));
             this.glControl1.Name = "glControl1";
-            this.glControl1.Size = new System.Drawing.Size(1022, 856);
+            this.glControl1.Size = new System.Drawing.Size(1022, 780);
             this.glControl1.StencilBits = ((uint)(8u));
             this.glControl1.TabIndex = 0;
             this.glControl1.Render += new System.EventHandler<OpenGL.GlControlEventArgs>(this.glControl1_Render);
@@ -214,7 +221,7 @@
             // 
             // button4
             // 
-            this.button4.Location = new System.Drawing.Point(1056, 769);
+            this.button4.Location = new System.Drawing.Point(1311, 719);
             this.button4.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.button4.Name = "button4";
             this.button4.Size = new System.Drawing.Size(63, 42);
@@ -225,7 +232,7 @@
             // 
             // nmChainLength
             // 
-            this.nmChainLength.Location = new System.Drawing.Point(1274, 769);
+            this.nmChainLength.Location = new System.Drawing.Point(1327, 769);
             this.nmChainLength.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.nmChainLength.Maximum = new decimal(new int[] {
             6,
@@ -238,7 +245,7 @@
             0,
             0});
             this.nmChainLength.Name = "nmChainLength";
-            this.nmChainLength.Size = new System.Drawing.Size(109, 25);
+            this.nmChainLength.Size = new System.Drawing.Size(58, 25);
             this.nmChainLength.TabIndex = 24;
             this.nmChainLength.Value = new decimal(new int[] {
             3,
@@ -249,7 +256,7 @@
             // 
             // nmIternation
             // 
-            this.nmIternation.Location = new System.Drawing.Point(1274, 802);
+            this.nmIternation.Location = new System.Drawing.Point(1157, 769);
             this.nmIternation.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.nmIternation.Minimum = new decimal(new int[] {
             1,
@@ -257,7 +264,7 @@
             0,
             0});
             this.nmIternation.Name = "nmIternation";
-            this.nmIternation.Size = new System.Drawing.Size(109, 25);
+            this.nmIternation.Size = new System.Drawing.Size(58, 25);
             this.nmIternation.TabIndex = 25;
             this.nmIternation.Value = new decimal(new int[] {
             1,
@@ -270,7 +277,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("D2Coding", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
-            this.label1.Location = new System.Drawing.Point(1169, 769);
+            this.label1.Location = new System.Drawing.Point(1222, 769);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(97, 19);
             this.label1.TabIndex = 26;
@@ -280,7 +287,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("D2Coding", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
-            this.label2.Location = new System.Drawing.Point(1171, 802);
+            this.label2.Location = new System.Drawing.Point(1054, 769);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(89, 19);
             this.label2.TabIndex = 27;
@@ -409,12 +416,96 @@
             this.ckBoneParentCurrentVisible.UseVisualStyleBackColor = true;
             this.ckBoneParentCurrentVisible.CheckedChanged += new System.EventHandler(this.ckBoneParentCurrentVisible_CheckedChanged);
             // 
+            // button12
+            // 
+            this.button12.Location = new System.Drawing.Point(14, 815);
+            this.button12.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.button12.Name = "button12";
+            this.button12.Size = new System.Drawing.Size(86, 42);
+            this.button12.TabIndex = 39;
+            this.button12.Text = "바지입기";
+            this.button12.UseVisualStyleBackColor = true;
+            this.button12.Click += new System.EventHandler(this.button12_Click);
+            // 
+            // button13
+            // 
+            this.button13.Location = new System.Drawing.Point(198, 815);
+            this.button13.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.button13.Name = "button13";
+            this.button13.Size = new System.Drawing.Size(118, 42);
+            this.button13.TabIndex = 40;
+            this.button13.Text = "저고리입기";
+            this.button13.UseVisualStyleBackColor = true;
+            this.button13.Click += new System.EventHandler(this.button13_Click);
+            // 
+            // button14
+            // 
+            this.button14.Location = new System.Drawing.Point(414, 815);
+            this.button14.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.button14.Name = "button14";
+            this.button14.Size = new System.Drawing.Size(86, 42);
+            this.button14.TabIndex = 41;
+            this.button14.Text = "헤어밴드";
+            this.button14.UseVisualStyleBackColor = true;
+            this.button14.Click += new System.EventHandler(this.button14_Click);
+            // 
+            // button15
+            // 
+            this.button15.Location = new System.Drawing.Point(106, 815);
+            this.button15.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.button15.Name = "button15";
+            this.button15.Size = new System.Drawing.Size(86, 42);
+            this.button15.TabIndex = 42;
+            this.button15.Text = "바지입기";
+            this.button15.UseVisualStyleBackColor = true;
+            this.button15.Click += new System.EventHandler(this.button15_Click);
+            // 
+            // button16
+            // 
+            this.button16.Location = new System.Drawing.Point(322, 815);
+            this.button16.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.button16.Name = "button16";
+            this.button16.Size = new System.Drawing.Size(86, 42);
+            this.button16.TabIndex = 43;
+            this.button16.Text = "짚신";
+            this.button16.UseVisualStyleBackColor = true;
+            this.button16.Click += new System.EventHandler(this.button16_Click);
+            // 
+            // button17
+            // 
+            this.button17.Location = new System.Drawing.Point(106, 865);
+            this.button17.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.button17.Name = "button17";
+            this.button17.Size = new System.Drawing.Size(86, 42);
+            this.button17.TabIndex = 44;
+            this.button17.Text = "바지제거";
+            this.button17.UseVisualStyleBackColor = true;
+            this.button17.Click += new System.EventHandler(this.button17_Click);
+            // 
+            // button18
+            // 
+            this.button18.Location = new System.Drawing.Point(198, 865);
+            this.button18.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.button18.Name = "button18";
+            this.button18.Size = new System.Drawing.Size(118, 42);
+            this.button18.TabIndex = 45;
+            this.button18.Text = "저고리제거";
+            this.button18.UseVisualStyleBackColor = true;
+            this.button18.Click += new System.EventHandler(this.button18_Click);
+            // 
             // Form3D
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
-            this.ClientSize = new System.Drawing.Size(1398, 897);
+            this.ClientSize = new System.Drawing.Size(1398, 1055);
+            this.Controls.Add(this.button18);
+            this.Controls.Add(this.button17);
+            this.Controls.Add(this.button16);
+            this.Controls.Add(this.button15);
+            this.Controls.Add(this.button14);
+            this.Controls.Add(this.button13);
+            this.Controls.Add(this.button12);
             this.Controls.Add(this.ckBoneParentCurrentVisible);
             this.Controls.Add(this.button11);
             this.Controls.Add(this.button10);
@@ -487,5 +578,12 @@
         private System.Windows.Forms.Button button10;
         private System.Windows.Forms.Button button11;
         private System.Windows.Forms.CheckBox ckBoneParentCurrentVisible;
+        private System.Windows.Forms.Button button12;
+        private System.Windows.Forms.Button button13;
+        private System.Windows.Forms.Button button14;
+        private System.Windows.Forms.Button button15;
+        private System.Windows.Forms.Button button16;
+        private System.Windows.Forms.Button button17;
+        private System.Windows.Forms.Button button18;
     }
 }

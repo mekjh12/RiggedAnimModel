@@ -87,6 +87,7 @@
   <ItemGroup>
     <Compile Include="Animate\AniModel.cs" />
     <Compile Include="Animate\BoneAngle.cs" />
+    <Compile Include="Animate\Clothes.cs" />
     <Compile Include="Animate\ColorPoint.cs" />
     <Compile Include="Animate\MeshTriangles.cs" />
     <Compile Include="Animate\Motion.cs" />

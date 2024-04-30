@@ -3,18 +3,21 @@ using LSystem.Animate;
 using OpenGL;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Xml.Linq;
 
 namespace LSystem.Animate
 {
     class AniModel
     {
-        Entity _model;
+        Dictionary<string, Entity> _models;
         Bone _rootBone;
         int _jointCount;
         Animator _animator;
         Matrix4x4f _rootBoneTransform;
         Matrix4x4f _bindShapeMatrix;
+
         XmlDae _xmlDae;
         string _name;
 
@@ -46,6 +49,7 @@ namespace LSystem.Animate
             set => _bindShapeMatrix = value;
         }
 
+
         /// <summary>
         /// 
         /// </summary>
@@ -64,7 +68,7 @@ namespace LSystem.Animate
         /// <summary>
         /// 
         /// </summary>
-        public Entity Entity => _model;
+        public Dictionary<string,  Entity> Entities => _models;
 
         /// <summary>
         /// 
@@ -76,9 +80,11 @@ namespace LSystem.Animate
         /// </summary>
         /// <param name="model"></param>
         /// <param name="xmlDae"></param>
-        public AniModel(Entity model, XmlDae xmlDae)
+        public AniModel(string name, Entity model, XmlDae xmlDae)
         {
-            _model = model;
+            _models = new Dictionary<string, Entity>();
+            _models.Add(name, model);
+
             _xmlDae = xmlDae;
             _rootBone = xmlDae.RootBone;
             _jointCount = xmlDae.BoneCount;
@@ -86,6 +92,8 @@ namespace LSystem.Animate
             _rootBoneTransform = xmlDae.RootMatirix;
 
         }
+
+        public Entity GetEntity(string name) => _models[name];
 
         /// <summary>
         /// 
