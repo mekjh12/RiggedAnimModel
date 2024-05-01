@@ -12,8 +12,16 @@ namespace LSystem
         protected Pose _pose;
         protected Material _material;
         protected bool _isAxisVisible = false;
+        protected PolygonMode _polygonMode = (PolygonMode)0;
+        protected float _drawThick = 1.0f;
 
         Vertex3f _scale;
+
+        public float DrawThick
+        {
+            get => _drawThick;
+            set => _drawThick = value;
+        }
 
         public uint OBJECT_GUID => _guid;
 
@@ -21,6 +29,12 @@ namespace LSystem
         {
             get => _isAxisVisible;
             set => _isAxisVisible = value;
+        }
+
+        public PolygonMode PolygonMode
+        {
+            get => _polygonMode;
+            set => _polygonMode = value;
         }
 
         public string Name

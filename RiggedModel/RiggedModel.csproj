@@ -97,6 +97,7 @@
     <Compile Include="Animate\BonePose.cs" />
     <Compile Include="Animate\KeyFrame.cs" />
     <Compile Include="Animate\Kinetics.cs" />
+    <Compile Include="Animate\ObjLoader.cs" />
     <Compile Include="Animate\TextureStorage.cs" />
     <Compile Include="Animate\XmlDae.cs" />
     <Compile Include="Common\IniFile.cs" />

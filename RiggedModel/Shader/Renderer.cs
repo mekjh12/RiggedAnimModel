@@ -36,6 +36,8 @@ namespace LSystem
             Matrix4x4f scaled = Matrix4x4f.Scaled(0.3f * size, size, 0.5f * size);
 
             Gl.LineWidth(thick);
+            
+
             shader.LoadModelMatrix(mat * scaled);
             Gl.DrawArrays(PrimitiveType.Lines, 0, 6);
 
@@ -172,6 +174,8 @@ namespace LSystem
         public static void Render(AnimateShader shader, Matrix4x4f[] jointTransforms, Matrix4x4f rootMatrix, Entity entity, Camera camera)
         {
             if (entity == null) return;
+
+            if (entity.PolygonMode != 0) Gl.PolygonMode(MaterialFace.FrontAndBack, entity.PolygonMode);
 
             shader.Bind();
 

@@ -1,26 +1,19 @@
 ﻿using OpenGL;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Windows;
-using static Khronos.Platform;
 
 namespace LSystem.Animate
 {
     class Clothes
     {
-        public static RawModel3d MergeOneTopology(List<Vertex3f> lstPositions, List<Vertex2f> lstTexCoord, 
-            List<Vertex4i> lstBoneIndex, List<Vertex4f> lstBoneWeight,
-            MeshTriangles meshTriangles, float expandValue = 0.0001f)
+        private static void MergeOneTopology(List<Vertex3f> lstPositions, MeshTriangles meshTriangles,
+            out List<Vertex3f> pList, out Vertex3f[] normals, out Dictionary<uint, uint> map,
+            float expandValue = 0.0001f)
         {
-            // 중복되는 점을 제거하여 단일 점리스트를 만든다.
-            Dictionary<uint, uint> map = new Dictionary<uint, uint>();
-            List<Vertex3f> pList = new List<Vertex3f>();
+            // 중복되는 점을 찾아 단일화 된 딕셔너리를 만든다.
+            map = new Dictionary<uint, uint>();
+            pList = new List<Vertex3f>();
 
+            // 단일화 된 점 리스트를 만든다.
             for (uint i = 0; i < lstPositions.Count; i++)
             {
                 bool isEqual = false;
@@ -43,54 +36,64 @@ namespace LSystem.Animate
                 }
             }
 
-            // indices리스트를 만든다.
+            // 삼각형 인덱스 리스트를 만든다.
             List<uint> indices = new List<uint>();
             for (int i = 0; i < meshTriangles.Vertices.Count; i++)
             {
                 indices.Add(map[meshTriangles.Vertices[i]]);
             }
 
-            // normal 계산
-            Vertex4f[] normals = new Vertex4f[pList.Count];
-            for (int i = 0; i < indices.Count; i+=3)
+            // 단일화된 점의 법선벡터를 평균하여 법선벡터 리스트를 만든다.
+            Vertex4f[] nors = new Vertex4f[pList.Count];
+            for (int i = 0; i < indices.Count; i += 3)
             {
                 int a = (int)indices[i];
-                int b = (int)indices[i+1];
-                int c = (int)indices[i+2];
+                int b = (int)indices[i + 1];
+                int c = (int)indices[i + 2];
                 Vertex3f va = pList[a];
                 Vertex3f vb = pList[b];
                 Vertex3f vc = pList[c];
                 Vertex3f n = (vb - va).Cross(vc - va).Normalized;
 
-                normals[a].x += n.x;
-                normals[a].y += n.y;
-                normals[a].z += n.z;
-                normals[a].w += 1.0f;
+                nors[a].x += n.x;
+                nors[a].y += n.y;
+                nors[a].z += n.z;
+                nors[a].w += 1.0f;
 
-                normals[b].x += n.x;
-                normals[b].y += n.y;
-                normals[b].z += n.z;
-                normals[b].w += 1.0f;
+                nors[b].x += n.x;
+                nors[b].y += n.y;
+                nors[b].z += n.z;
+                nors[b].w += 1.0f;
 
-                normals[c].x += n.x;
-                normals[c].y += n.y;
-                normals[c].z += n.z;
-                normals[c].w += 1.0f;
+                nors[c].x += n.x;
+                nors[c].y += n.y;
+                nors[c].z += n.z;
+                nors[c].w += 1.0f;
             }
 
-            for (int i = 0; i < normals.Length; i++)
+            normals = new Vertex3f[nors.Length];
+            for (int i = 0; i < nors.Length; i++)
             {
-                float w = normals[i].w;
+                float w = nors[i].w;
                 normals[i].x /= w;
                 normals[i].y /= w;
                 normals[i].z /= w;
             }
+        }
 
+        public static RawModel3d Expand(List<Vertex3f> lstPositions, List<Vertex2f> lstTexCoord, 
+            List<Vertex4i> lstBoneIndex, List<Vertex4f> lstBoneWeight,
+            MeshTriangles meshTriangles, float expandValue = 0.0001f)
+        {
+            MergeOneTopology(lstPositions, meshTriangles, out List<Vertex3f> pList, out Vertex3f[] normals, out Dictionary<uint, uint> map, expandValue);
+
+            // 단일화 점리스트의 점벡터를 팽창한다.
             for (int i = 0; i < pList.Count; i++)
             {
                 pList[i] += new Vertex3f(normals[i].x, normals[i].y, normals[i].z) * expandValue;
             }
 
+            // 단일화된 점 벡터리스트를 원본의 점벡터 리스트에 맵딕셔너리를 이용하여 반영한다.
             for (uint i = 0; i < lstPositions.Count; i++)
             {
                 lstPositions[(int)i] = pList[(int)map[i]];

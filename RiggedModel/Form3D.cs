@@ -199,11 +199,10 @@ namespace LSystem
                 }
 
                 _aniModel.Update(deltaTime);
-                Matrix4x4f poseRootMatrix = _aniModel.RootBoneTransform * _aniModel.BindShapeMatrix;
-
+                
                 if (_isIkApply)
                 {
-                    Bone boneEnd = _aniModel.GetBone(this.cbBone.Text);
+                    Bone boneEnd = _aniModel.GetBoneByName(this.cbBone.Text);
                     if (boneEnd != null)
                     {
                         if (_aniModel.Animator.IsPlaying)
@@ -250,7 +249,7 @@ namespace LSystem
                 Gl.Enable(EnableCap.CullFace);
                 Gl.CullFace(CullFaceMode.Back);
 
-                Gl.ClearColor(0.0f, 0.0f, 0.9f, 1.0f);
+                Gl.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 Gl.Enable(EnableCap.DepthTest);
 
@@ -258,23 +257,20 @@ namespace LSystem
                 Gl.BlendEquation(BlendEquationMode.FuncAdd);
                 Gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
-                Gl.PolygonMode(MaterialFace.FrontAndBack, _polygonMode);
-
-                //if (this.ckWorldAxis.Checked) Renderer.RenderAxis(_shader, camera);
+                if (this.ckWorldAxis.Checked) Renderer.RenderAxis(_shader, camera);
 
                 // 사물에 대한 렌더링
                 foreach (Entity entity in _entities)
                 {
-                    //Renderer.Render(_shader, entity, camera, Matrix4x4f.Identity);
+                    Renderer.Render(_shader, entity, camera, Matrix4x4f.Identity);
                 }
 
-                _aniModel.BindShapeMatrix = xmlDae.BindShapeMatrix;
-                Matrix4x4f poseRootMatrix = _aniModel.RootBoneTransform * _aniModel.BindShapeMatrix;
-                Matrix4x4f[] jointMatrix = _aniModel.BoneAnimationBindTransforms;
-
+                Matrix4x4f[] jointMatrix = _aniModel.JointTransformMatrix;
 
                 foreach (KeyValuePair<string, Entity> item in _aniModel.Entities)
                 {
+                    Gl.PolygonMode(MaterialFace.FrontAndBack, _polygonMode);
+
                     Entity mainEntity = item.Value;// _aniModel.GetEntity("main");
                     Matrix4x4f entityModel = mainEntity.ModelMatrix;
 
@@ -282,11 +278,11 @@ namespace LSystem
                     {
                         Gl.Disable(EnableCap.CullFace);
                         if (_renderingMode == RenderingMode.Animation)
-                            Renderer.Render(_ashader, jointMatrix, poseRootMatrix, mainEntity, camera);
+                            Renderer.Render(_ashader, jointMatrix, _aniModel.PoseRootMatrix, mainEntity, camera);
                         else if (_renderingMode == RenderingMode.BoneWeight)
-                            Renderer.Render(_bwShader, poseRootMatrix, _boneIndex, mainEntity, camera);
+                            Renderer.Render(_bwShader, _aniModel.PoseRootMatrix, _boneIndex, mainEntity, camera);
                         else if (_renderingMode == RenderingMode.Static)
-                            Renderer.Render(_shader, mainEntity, camera, poseRootMatrix);
+                            Renderer.Render(_shader, mainEntity, camera, _aniModel.PoseRootMatrix);
                         Gl.Enable(EnableCap.CullFace);
                     }
 
@@ -303,14 +299,14 @@ namespace LSystem
                     {
                         foreach (Matrix4x4f jointTransform in _aniModel.BoneAnimationTransforms)
                         {
-                            Renderer.RenderLocalAxis(_shader, camera, size: jointTransform.Column3.Vertex3f().Norm() * _axisLength, thick: _drawThick,
-                                 entityModel * jointTransform);
+                            Renderer.RenderLocalAxis(_shader, camera, size: jointTransform.Column3.Vertex3f().Norm() * _axisLength, 
+                                thick: _drawThick, entityModel * jointTransform);
                         }
                     }
 
                     if (this.ckBoneParentCurrentVisible.Checked) // 부모와 현재 뼈대 렌더링
                     {
-                        Bone cBone = _aniModel.GetBone(this.cbBone.Text);
+                        Bone cBone = _aniModel.GetBoneByName(this.cbBone.Text);
                         Bone pBone = cBone.Parent;
                         if (cBone != null)
                         {
@@ -464,7 +460,7 @@ namespace LSystem
             }
             else if (e.KeyCode == Keys.D3)
             {
-                Bone bone = _aniModel.GetBone("mixamorig_LeftHand_end");
+                Bone bone = _aniModel.GetBoneByName("mixamorig_LeftHand_end");
                 Vertex3f G = _ikPoint;
 
                 // 말단뼈로부터 최상위 뼈까지 리스트를 만들고 Chain Length를 구함.
@@ -501,7 +497,7 @@ namespace LSystem
         private void glControl1_MouseDoubleClick(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             Camera camera = _gameLoop.Camera;
-            Bone bone = _aniModel.GetBone(this.cbBone.Text);
+            Bone bone = _aniModel.GetBoneByName(this.cbBone.Text);
             camera.GoTo(bone.AnimatedTransform.Position);
             if (camera is OrbitCamera) (camera as OrbitCamera).Distance = 1.0f;
         }
@@ -600,14 +596,14 @@ namespace LSystem
 
         private void button3_Click(object sender, EventArgs e)
         {
-            _aniModel.GetBone("mixamorig_LeftHand").RestrictAngle = new BoneAngle(-180, 180, -180, 180, -180, 180);
+            _aniModel.GetBoneByName("mixamorig_LeftHand").RestrictAngle = new BoneAngle(-180, 180, -180, 180, -180, 180);
         }
 
         private void button4_Click(object sender, EventArgs e)
         {
-            _aniModel.GetBone("mixamorig_LeftHand").RestrictAngle = new BoneAngle(-45, 45, -30, 30, 0, 0);
-            _aniModel.GetBone("mixamorig_LeftForeArm").RestrictAngle = new BoneAngle(-90, 90, 0, 0, 0, 0);
-            _aniModel.GetBone("mixamorig_LeftArm").RestrictAngle = new BoneAngle(-90, 90, -90, 90, 0, 0);
+            _aniModel.GetBoneByName("mixamorig_LeftHand").RestrictAngle = new BoneAngle(-45, 45, -30, 30, 0, 0);
+            _aniModel.GetBoneByName("mixamorig_LeftForeArm").RestrictAngle = new BoneAngle(-90, 90, 0, 0, 0, 0);
+            _aniModel.GetBoneByName("mixamorig_LeftArm").RestrictAngle = new BoneAngle(-90, 90, -90, 90, 0, 0);
         }
 
         private void ckSkinVisible_CheckedChanged(object sender, EventArgs e)
@@ -695,43 +691,22 @@ namespace LSystem
 
         private void button13_Click(object sender, EventArgs e)
         {
-            List<TexturedModel> texturedModels = xmlDae.WearCloth(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\jeogori.dae", 0.0002f);
-            Entity clothEntity = new Entity("aniModel", texturedModels[0]);
-            clothEntity.Material = new Material();
-            clothEntity.Position = new Vertex3f(0, 0, 0);
-            clothEntity.IsAxisVisible = true;
-            _aniModel.Entities.Add("jeogori", clothEntity);            
+            _aniModel.Wear(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\jeogori.dae");
         }
 
         private void button14_Click(object sender, EventArgs e)
         {
-            List<TexturedModel> texturedModels = xmlDae.WearCloth(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\nobiHairBand.dae", 0.0001f);
-            Entity clothEntity = new Entity("aniModel", texturedModels[0]);
-            clothEntity.Material = new Material();
-            clothEntity.Position = new Vertex3f(0, 0, 0);
-            clothEntity.IsAxisVisible = true;
-            _aniModel.Entities.Add("nobiHairBand", clothEntity);
+            _aniModel.Wear(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\nobiHairBand.dae");
         }
 
         private void button15_Click(object sender, EventArgs e)
         {
-            List<TexturedModel> texturedModels = xmlDae.WearCloth(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\pants.dae");
-            Entity clothEntity = new Entity("aniModel", texturedModels[0]);
-            clothEntity.Material = new Material();
-            clothEntity.Position = new Vertex3f(0, 0, 0);
-            clothEntity.IsAxisVisible = true;
-            _aniModel.Entities.Add("pants", clothEntity);
+            _aniModel.Wear(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\pants.dae");
         }
 
         private void button16_Click(object sender, EventArgs e)
         {
-            List<TexturedModel> texturedModels = xmlDae.WearCloth(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\gipshin.dae");
-            Entity clothEntity = new Entity("aniModel", texturedModels[0]);
-            clothEntity.Material = new Material();
-            clothEntity.Position = new Vertex3f(0, 0, 0);
-            clothEntity.IsAxisVisible = true;
-            _aniModel.Entities.Add("gipshin", clothEntity);
-
+            _aniModel.Wear(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\gipshin.dae");
         }
 
         private void button17_Click(object sender, EventArgs e)
@@ -742,6 +717,12 @@ namespace LSystem
         private void button18_Click(object sender, EventArgs e)
         {
             _aniModel.Entities.Remove("jeogori");
+        }
+
+        private void button19_Click(object sender, EventArgs e)
+        {
+            Entity eye = _aniModel.Transplant(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\eye.dae", "mixamorig_Head");
+            //eye.PolygonMode = PolygonMode.Fill;
         }
     }
 }

@@ -42,8 +42,9 @@ namespace LSystem.Animate
         /// <param name="animation"></param>
         public void SetMotion(Motion motion, float blendingInterval = 0.2f)
         {
-            Console.WriteLine(motion?.Name);
+            Console.WriteLine("현재지정하는 모션: " + motion?.Name);
 
+            // 진행하고 있는 모션이 잇는 경우에 블렌딩 인터벌동안 블렌딩 처리함.
             if (_currentMotion == null)
             {
                 _currentMotion = motion;
@@ -97,13 +98,13 @@ namespace LSystem.Animate
             }
 
             // 키프레임으로부터 현재의 로컬포즈행렬을 가져온다.(bone name, mat4x4f)
-            Dictionary<string, Matrix4x4f> currentPose = CalculateCurrentAnimationPose();
+            Dictionary<string, Matrix4x4f> currentPose = CalculateCurrentAnimationLocalPose();
 
             // [트리구조 탐색] 로컬 포즈행렬로부터 캐릭터공간의 포즈행렬을 얻는다.
             Stack<Bone> stack = new Stack<Bone>();
             Stack<Matrix4x4f> mStack = new Stack<Matrix4x4f>();
-            stack.Push(_animatedModel.RootBone);
-            mStack.Push(Matrix4x4f.Identity);
+            stack.Push(_animatedModel.RootBone); // 뼈대스택
+            mStack.Push(Matrix4x4f.Identity);    // 행렬스택
             while (stack.Count > 0)
             {
                 Bone bone = stack.Pop();
@@ -125,11 +126,11 @@ namespace LSystem.Animate
         }
 
         /// <summary>
-        /// * 현재 시간의 애니메이션포즈를 가져온다. <br/>
+        /// * 현재 시간의 현재 모션 애니메이션 로컬 포즈를 가져온다. <br/>
         /// * 반환값의 딕셔너리는 jointName, Matrix4x4f이다.<br/>
         /// </summary>
         /// <returns></returns>
-        private Dictionary<string, Matrix4x4f> CalculateCurrentAnimationPose()
+        private Dictionary<string, Matrix4x4f> CalculateCurrentAnimationLocalPose()
         {
             // 현재 시간에서 가장 근접한 사이의 두 개의 프레임을 가져온다.
             KeyFrame previousFrame = _currentMotion.FirstKeyFrame;

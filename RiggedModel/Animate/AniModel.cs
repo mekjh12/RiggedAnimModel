@@ -1,11 +1,6 @@
-﻿using Assimp;
-using LSystem.Animate;
-using OpenGL;
-using System;
+﻿using OpenGL;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Xml.Linq;
+using System.IO;
 
 namespace LSystem.Animate
 {
@@ -15,68 +10,85 @@ namespace LSystem.Animate
         Bone _rootBone;
         int _jointCount;
         Animator _animator;
-        Matrix4x4f _rootBoneTransform;
-        Matrix4x4f _bindShapeMatrix;
-
         XmlDae _xmlDae;
-        string _name;
 
-        public string Name => _name;
-
-        public Bone GetBone(string boneName)
+        public Entity Wear(string fileName)
         {
-            Bone bone = _rootBone;
-            Stack<Bone> stack = new Stack<Bone>();
-            stack.Push(bone);
-            while (stack.Count > 0)
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            List<TexturedModel> texturedModels = _xmlDae.WearCloth(fileName);
+
+            Entity clothEntity = new Entity("aniModel_" + name, texturedModels[0]);
+            clothEntity.Material = new Material();
+            clothEntity.Position = Vertex3f.Zero;
+            clothEntity.IsAxisVisible = true;
+
+            if (_models.ContainsKey(name))
             {
-                Bone b = stack.Pop();
-                if (boneName == b.Name)
-                {
-                    return b;
-                }
-                foreach (Bone childBone in b.Childrens) stack.Push(childBone);
+                _models.Remove(name);
+                _models.Add(name, clothEntity);
             }
+            else
+            {
+                _models.Add(name, clothEntity);
+            }
+
+            return clothEntity;
+        }
+
+        public Entity Transplant(string fileName, string parentBoneName)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+
+            Bone parentBone = GetBoneByName(parentBoneName);
+            Bone curBone = new Bone($"bone_{name}", _xmlDae.BoneCount, Matrix4x4f.Identity);
+            curBone.LocalTransform = Matrix4x4f.Translated(1, 0, -0.5f);
+            curBone.BindTransform = Matrix4x4f.Translated(1, 0, -0.5f);
+            curBone.InverseBindTransform = curBone.BindTransform.Inverse;
+            parentBone.AddChild(curBone);
+            _jointCount++;
+
+            List<TexturedModel> texturedModels = _xmlDae.Load(fileName, boneIndex: curBone.Index);            
+
+
             return null;
         }
 
         /// <summary>
-        /// 
+        /// 본이름으로부터 본을 가져온다.
         /// </summary>
-        public Matrix4x4f BindShapeMatrix
-        {
-            get => _bindShapeMatrix;
-            set => _bindShapeMatrix = value;
-        }
-
+        /// <param name="boneName"></param>
+        /// <returns></returns>
+        public Bone GetBoneByName(string boneName) => _xmlDae.GetBoneByName(boneName);
 
         /// <summary>
-        /// 
+        /// Animator를 가져온다.
         /// </summary>
         public Animator Animator => _animator;
 
         /// <summary>
-        /// 최상위 뼈의 포즈행렬을 가져온다.
+        /// * 최상위본을 위한 바이딩 행렬<br/>
+        /// - 최상위뼈도 캐릭터 공간에서의 바인딩 행렬이 필요하다.<br/>
+        /// - BindShapeMatrix -> _rootBoneTransform -> ... -> ...<br/>
         /// </summary>
-        public Matrix4x4f RootBoneTransform => _rootBoneTransform;
+        public Matrix4x4f PoseRootMatrix => _xmlDae.RootMatirix * _xmlDae.BindShapeMatrix;
 
         /// <summary>
-        /// 
+        /// 모션의 총 시간 길이를 가져온다.
         /// </summary>
         public float MotionTime => _animator.MotionTime;
 
         /// <summary>
-        /// 
+        /// Entity들을 모두 가져온다.
         /// </summary>
-        public Dictionary<string,  Entity> Entities => _models;
+        public Dictionary<string, Entity> Entities => _models;
 
         /// <summary>
-        /// 
+        /// 루트본을 가져온다.
         /// </summary>
         public Bone RootBone => _rootBone;
 
         /// <summary>
-        /// 
+        /// 생성자
         /// </summary>
         /// <param name="model"></param>
         /// <param name="xmlDae"></param>
@@ -89,14 +101,17 @@ namespace LSystem.Animate
             _rootBone = xmlDae.RootBone;
             _jointCount = xmlDae.BoneCount;
             _animator = new Animator(this);
-            _rootBoneTransform = xmlDae.RootMatirix;
-
         }
 
+        /// <summary>
+        /// 이름으로 Entity를 가져온다.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public Entity GetEntity(string name) => _models[name];
 
         /// <summary>
-        /// 
+        /// 모션을 설정한다.
         /// </summary>
         /// <param name="motionName"></param>
         public void SetMotion(string motionName)
@@ -116,37 +131,23 @@ namespace LSystem.Animate
         }
 
         /// <summary>
+        /// * bone.AnimatedTransform * bone.InverseBindTransform<br/>
         /// * 캐릭터 공간에서의 애니메이션을 포즈행렬을 최종적으로 가져온다.<br/>
         /// * v' = Ma(i) Md^-1(i) v (Ma 애니메이션행렬, Md 바이딩포즈행렬)<br/>
         /// * 정점들을 바인딩포즈행렬을 이용하여 뼈 공간으로 정점을 변환 후, 애니메이션 행렬을 이용하여 뼈의 캐릭터 공간으로의 변환행렬을 가져온다.<br/>
         /// </summary>
-        public Matrix4x4f[] BoneAnimationBindTransforms
+        public Matrix4x4f[] JointTransformMatrix
         {
             get
             {
                 Matrix4x4f[] jointMatrices = new Matrix4x4f[_jointCount];
-                Stack<Bone> stack = new Stack<Bone>();
-                stack.Push(_rootBone.Childrens[0]);
-                while(stack.Count > 0)
+                foreach (KeyValuePair<string, Bone> item in _xmlDae.DicBones)
                 {
-                    Bone bone = stack.Pop();
+                    Bone bone = item.Value;
                     if (bone.Index >= 0)
                         jointMatrices[bone.Index] = bone.AnimatedTransform * bone.InverseBindTransform;
-                    foreach (Bone j in bone.Childrens) stack.Push(j);
                 }
                 return jointMatrices;
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public Matrix4x4f AnimatedRootBone
-        {
-            get
-            {
-                Bone rbone = _rootBone.Childrens[0];
-                return rbone.AnimatedTransform;
             }
         }
 
@@ -159,15 +160,11 @@ namespace LSystem.Animate
             get
             {
                 Matrix4x4f[] jointMatrices = new Matrix4x4f[_jointCount];
-                Stack<Bone> stack = new Stack<Bone>();
-                stack.Push(_rootBone);
-
-                while (stack.Count > 0)
+                foreach (KeyValuePair<string, Bone> item in _xmlDae.DicBones)
                 {
-                    Bone bone = stack.Pop();
+                    Bone bone = item.Value;
                     if (bone.Index >= 0)
                         jointMatrices[bone.Index] = bone.AnimatedTransform;
-                    foreach (Bone j in bone.Childrens) stack.Push(j);
                 }
                 return jointMatrices;
             }
@@ -180,18 +177,12 @@ namespace LSystem.Animate
         public Matrix4x4f[] InverseBindPoseTransforms
         {
             get
-            {
+            { 
                 Matrix4x4f[] jointMatrices = new Matrix4x4f[_jointCount];
-                Stack<Bone> stack = new Stack<Bone>();
-                stack.Push(_rootBone);
-                while (stack.Count > 0)
+                foreach (KeyValuePair<string, Bone> item in _xmlDae.DicBones)
                 {
-                    Bone bone = stack.Pop();
-                    if (bone.Index >= 0)
-                    {
-                        jointMatrices[bone.Index] = bone.InverseBindTransform;
-                    }
-                    foreach (Bone j in bone.Childrens) stack.Push(j);
+                    Bone bone = item.Value;
+                    jointMatrices[bone.Index] = bone.InverseBindTransform;
                 }
                 return jointMatrices;
             }

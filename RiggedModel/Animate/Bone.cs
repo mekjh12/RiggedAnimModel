@@ -10,16 +10,15 @@ namespace LSystem.Animate
     /// </summary>
     public class Bone
     {
-
         int _index;
         string _name;
         List<Bone> _children = new List<Bone>();
         Bone _parent;
 
-        private Matrix4x4f _animatedTransform = Matrix4x4f.Identity;
-        private Matrix4x4f _bindTransform = Matrix4x4f.Identity;
-        private Matrix4x4f _inverseBindTransform = Matrix4x4f.Identity;
-        private Matrix4x4f _localTransform = Matrix4x4f.Identity;
+        Matrix4x4f _localTransform = Matrix4x4f.Identity;
+        Matrix4x4f _animatedTransform = Matrix4x4f.Identity;
+        Matrix4x4f _bindTransform = Matrix4x4f.Identity;
+        Matrix4x4f _inverseBindTransform = Matrix4x4f.Identity;
 
         BoneAngle _restrictAngle;
 
