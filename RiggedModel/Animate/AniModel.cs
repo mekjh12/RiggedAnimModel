@@ -12,10 +12,10 @@ namespace LSystem.Animate
         Animator _animator;
         XmlDae _xmlDae;
 
-        public Entity Wear(string fileName)
+        public Entity Wear(string fileName, float expandValue = 0.00005f)
         {
             string name = Path.GetFileNameWithoutExtension(fileName);
-            List<TexturedModel> texturedModels = _xmlDae.WearCloth(fileName);
+            List<TexturedModel> texturedModels = _xmlDae.WearCloth(fileName, expandValue);
 
             Entity clothEntity = new Entity("aniModel_" + name, texturedModels[0]);
             clothEntity.Material = new Material();

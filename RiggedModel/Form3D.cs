@@ -64,7 +64,7 @@ namespace LSystem
         }
 
         private void Form3D_Load(object sender, EventArgs e)
-        {            
+        {
             // ### 초기화 ###
             IniFile.SetFileName("setup.ini");
 
@@ -74,7 +74,7 @@ namespace LSystem
             _ashader = new AnimateShader();
             _bwShader = new BoneWeightShader();
             _entities = new List<Entity>();
-            
+
             // 바닥
             TexturedModel floor = new TexturedModel(Loader3d.LoadPlane(0, 20.0f), new Texture(EngineLoop.PROJECT_PATH + "\\Res\\grass.png"));
             _entities.Add(new Entity("floor", floor) { Material = Material.White });

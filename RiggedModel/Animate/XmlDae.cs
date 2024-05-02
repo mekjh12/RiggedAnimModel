@@ -866,13 +866,6 @@ namespace LSystem.Animate
                     bone.InverseBindTransform = invBindPoses[bone.Name];                    
                 }
 
-                if (rootBone != null)
-                {
-                    Console.WriteLine(bone.Name + "=" + bone.InverseBindTransform.Inverse);
-                    Console.WriteLine(bone.Name + "=" + (bone.BindTransform * rootBone.BindTransform * _bindShapeMatrix));
-                }
-
-
                 // 하위 노드를 순회한다.
                 foreach (XmlNode child in node.ChildNodes)
                 {

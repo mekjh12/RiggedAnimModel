@@ -75,9 +75,9 @@ namespace LSystem.Animate
             for (int i = 0; i < nors.Length; i++)
             {
                 float w = nors[i].w;
-                normals[i].x /= w;
-                normals[i].y /= w;
-                normals[i].z /= w;
+                normals[i].x = nors[i].x / w;
+                normals[i].y = nors[i].y / w;
+                normals[i].z = nors[i].z / w;
             }
         }
 
