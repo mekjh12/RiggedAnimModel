@@ -40,7 +40,7 @@ namespace LSystem.Animate
             string name = Path.GetFileNameWithoutExtension(fileName);
 
             Bone parentBone = GetBoneByName(parentBoneName);
-            Bone curBone = new Bone($"bone_{name}", _xmlDae.BoneCount, Matrix4x4f.Identity);
+            Bone curBone = new Bone($"bone_{name}", _xmlDae.BoneCount);
             curBone.LocalTransform = Matrix4x4f.Translated(1, 0, -0.5f);
             curBone.BindTransform = Matrix4x4f.Translated(1, 0, -0.5f);
             curBone.InverseBindTransform = curBone.BindTransform.Inverse;

@@ -146,11 +146,10 @@ namespace LSystem.Animate
             set => _bindTransform = value;
         }
 
-        public Bone(string name, int index, Matrix4x4f bindTransform)
+        public Bone(string name, int index)
         {
             _name = name;
             _index = index;
-            _bindTransform = bindTransform;
             _restrictAngle = new BoneAngle(-180, 180, -180, 180, -90, 90);
         }
 

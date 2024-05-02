@@ -174,11 +174,12 @@ namespace LSystem.Animate
 
             // (2) library_geometries = position, normal, texcoord, color
             List<MeshTriangles> meshes = LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
-            
-            // (3) library_controllers = boneIndex, boneWeight
-            LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses, out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight);
-            
-            // (3-1) boneName, boneIndexDictionary
+
+            // (3) library_controllers = boneNames, InvBindPoses, boneIndex, boneWeight
+            LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
+                out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight);
+
+            // (3-1) BoneIndex 딕셔너리 
             _boneNames = new string[boneNames.Count];
             _dicBoneIndex = new Dictionary<string, int>();
             for (int i = 0; i < boneNames.Count; i++)
@@ -824,7 +825,7 @@ namespace LSystem.Animate
             if (rootNode == null) return null;
 
             nStack.Push(rootNode);
-            Bone rootBone = new Bone("Armature", 0, Matrix4x4f.Identity);
+            Bone rootBone = new Bone("Armature", 0);
             bStack.Push(rootBone);
             while (nStack.Count > 0)
             {
@@ -862,20 +863,26 @@ namespace LSystem.Animate
 
                 if (invBindPoses.ContainsKey(bone.Name))
                 {
-                    bone.InverseBindTransform = invBindPoses[bone.Name];
+                    bone.InverseBindTransform = invBindPoses[bone.Name];                    
                 }
+
+                if (rootBone != null)
+                {
+                    Console.WriteLine(bone.Name + "=" + bone.InverseBindTransform.Inverse);
+                    Console.WriteLine(bone.Name + "=" + (bone.BindTransform * rootBone.BindTransform * _bindShapeMatrix));
+                }
+
 
                 // 하위 노드를 순회한다.
                 foreach (XmlNode child in node.ChildNodes)
                 {
                     if (child.Name != "node") continue;
                     nStack.Push(child);
-                    Bone childBone = new Bone("", 0, Matrix4x4f.Identity);
+                    Bone childBone = new Bone("", 0);
                     childBone.Parent = bone;
                     bone.AddChild(childBone);
                     bStack.Push(childBone);
                 }
-
             }
 
             return rootBone;
