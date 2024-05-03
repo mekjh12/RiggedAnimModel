@@ -17,7 +17,7 @@ namespace LSystem.Animate
 
         Matrix4x4f _localTransform = Matrix4x4f.Identity;
         Matrix4x4f _animatedTransform = Matrix4x4f.Identity;
-        Matrix4x4f _bindTransform = Matrix4x4f.Identity;
+        Matrix4x4f _localBindTransform = Matrix4x4f.Identity;
         Matrix4x4f _inverseBindTransform = Matrix4x4f.Identity;
 
         BoneAngle _restrictAngle;
@@ -140,10 +140,10 @@ namespace LSystem.Animate
         /// <summary>
         /// 바인딩 포즈의 변환행렬
         /// </summary>
-        public Matrix4x4f BindTransform
+        public Matrix4x4f LocalBindTransform
         {
-            get => _bindTransform;
-            set => _bindTransform = value;
+            get => _localBindTransform;
+            set => _localBindTransform = value;
         }
 
         public Bone(string name, int index)
@@ -297,7 +297,7 @@ namespace LSystem.Animate
         public override string ToString()
         {
             string txt = "";
-            Matrix4x4f m = _bindTransform;
+            Matrix4x4f m = _localBindTransform;
             for (uint i = 0; i < 4; i++)
             {
                 txt += $"{Cut(m[0, i])} {Cut(m[1, i])} {Cut(m[2, i])} {Cut(m[3, i])}" 

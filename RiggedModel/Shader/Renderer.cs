@@ -136,11 +136,11 @@ namespace LSystem
 
         }
 
-        public static void Render(BoneWeightShader shader, Matrix4x4f rootMatrix, int boneIndex, Entity entity, Camera camera)
+        public static void Render(BoneWeightShader shader, int boneIndex, Entity entity, Camera camera)
         {
             shader.Bind();
 
-            shader.LoadModelMatrix(entity.ModelMatrix * rootMatrix);
+            shader.LoadModelMatrix(entity.ModelMatrix);
             shader.LoadViewMatrix(camera.ViewMatrix);
             shader.LoadProjMatrix(camera.ProjectiveMatrix);
             shader.LoadBoneIndex(boneIndex);
@@ -171,7 +171,7 @@ namespace LSystem
             shader.Unbind();
         }
 
-        public static void Render(AnimateShader shader, Matrix4x4f[] jointTransforms, Matrix4x4f rootMatrix, Entity entity, Camera camera)
+        public static void Render(AnimateShader shader, Matrix4x4f[] jointTransforms, Entity entity, Camera camera)
         {
             if (entity == null) return;
 
@@ -184,7 +184,7 @@ namespace LSystem
             shader.LoadProjMatrix(camera.ProjectiveMatrix);
 
             for (int i = 0; i < jointTransforms?.Length; i++)
-                shader.PushBoneMatrix(i, jointTransforms[i] * rootMatrix);
+                shader.PushBoneMatrix(i, jointTransforms[i]);
 
             foreach (TexturedModel model in entity.Models)
             {
@@ -222,7 +222,7 @@ namespace LSystem
             shader.Unbind();
         }
 
-        public static void Render(StaticShader shader, Entity entity, Camera camera, Matrix4x4f rootMatrix)
+        public static void Render(StaticShader shader, Entity entity, Camera camera)
         {
             Gl.Enable(EnableCap.Blend);
             Gl.BlendEquation(BlendEquationMode.FuncAdd);
@@ -251,7 +251,7 @@ namespace LSystem
                 shader.LoadObjectColor(entity.Material.Ambient);
                 shader.LoadProjMatrix(camera.ProjectiveMatrix);
                 shader.LoadViewMatrix(camera.ViewMatrix);
-                shader.LoadModelMatrix(entity.ModelMatrix * rootMatrix);
+                shader.LoadModelMatrix(entity.ModelMatrix);
 
                 if (model.IsDrawElement)
                 {

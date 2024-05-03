@@ -38,18 +38,7 @@ namespace LSystem.Animate
         public Entity Transplant(string fileName, string parentBoneName)
         {
             string name = Path.GetFileNameWithoutExtension(fileName);
-
             Bone parentBone = GetBoneByName(parentBoneName);
-            Bone curBone = new Bone($"bone_{name}", _xmlDae.BoneCount);
-            curBone.LocalTransform = Matrix4x4f.Translated(1, 0, -0.5f);
-            curBone.BindTransform = Matrix4x4f.Translated(1, 0, -0.5f);
-            curBone.InverseBindTransform = curBone.BindTransform.Inverse;
-            parentBone.AddChild(curBone);
-            _jointCount++;
-
-            List<TexturedModel> texturedModels = _xmlDae.Load(fileName, boneIndex: curBone.Index);            
-
-
             return null;
         }
 
@@ -64,13 +53,6 @@ namespace LSystem.Animate
         /// Animator를 가져온다.
         /// </summary>
         public Animator Animator => _animator;
-
-        /// <summary>
-        /// * 최상위본을 위한 바이딩 행렬<br/>
-        /// - 최상위뼈도 캐릭터 공간에서의 바인딩 행렬이 필요하다.<br/>
-        /// - BindShapeMatrix -> _rootBoneTransform -> ... -> ...<br/>
-        /// </summary>
-        public Matrix4x4f PoseRootMatrix => _xmlDae.RootMatirix * _xmlDae.BindShapeMatrix;
 
         /// <summary>
         /// 모션의 총 시간 길이를 가져온다.
@@ -182,7 +164,8 @@ namespace LSystem.Animate
                 foreach (KeyValuePair<string, Bone> item in _xmlDae.DicBones)
                 {
                     Bone bone = item.Value;
-                    jointMatrices[bone.Index] = bone.InverseBindTransform;
+                    if (bone.Index >=0 && bone.Index <_jointCount)
+                        jointMatrices[bone.Index] = bone.InverseBindTransform;
                 }
                 return jointMatrices;
             }

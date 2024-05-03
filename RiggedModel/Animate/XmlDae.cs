@@ -49,7 +49,7 @@ namespace LSystem.Animate
         /// </summary>
         public Matrix4x4f BindShapeMatrix => _bindShapeMatrix;
 
-        public Matrix4x4f RootMatirix => _rootBone.BindTransform;
+        public Matrix4x4f RootMatirix => (_rootBone == null) ? Matrix4x4f.Identity : _rootBone.LocalBindTransform;
 
         public Bone RootBone => _rootBone;
 
@@ -81,7 +81,7 @@ namespace LSystem.Animate
         {
             _filename = filename;
 
-            List<TexturedModel> models = Load(filename, isLoadAnimation);
+            List<TexturedModel> models = LoadFile(filename);
 
             if (_texturedModels == null)
                 _texturedModels = new List<TexturedModel>();
@@ -102,9 +102,10 @@ namespace LSystem.Animate
             // (2) library_geometries = position, normal, texcoord, color
             List<MeshTriangles> meshes = LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
 
-            // (3) library_controllers = boneIndex, boneWeight
+            // (3) library_controllers = boneIndex, boneWeight, bindShapeMatrix
             LibraryController(xml, out List<string> clothBoneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
-                out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight);
+                out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight,  out Matrix4x4f bindShapeMatrix);
+            _bindShapeMatrix = bindShapeMatrix;
 
             // (4-1) boneName, boneIndexDictionary
             Dictionary<int, int> map = new Dictionary<int, int>();
@@ -162,7 +163,8 @@ namespace LSystem.Animate
             return motionName;
         }
 
-        public List<TexturedModel> Load(string filename, bool isLoadAnimation = true, int boneIndex = -1)
+
+        public List<TexturedModel> LoadFile(string filename)
         {
             XmlDocument xml = new XmlDocument();
             xml.Load(filename);
@@ -177,7 +179,8 @@ namespace LSystem.Animate
 
             // (3) library_controllers = boneNames, InvBindPoses, boneIndex, boneWeight
             LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
-                out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight);
+                    out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight, out Matrix4x4f bindShapeMatrix);
+            _bindShapeMatrix = bindShapeMatrix;
 
             // (3-1) BoneIndex 딕셔너리 
             _boneNames = new string[boneNames.Count];
@@ -189,14 +192,18 @@ namespace LSystem.Animate
             }
 
             // (4) library_animations
-            if (isLoadAnimation)
-            {
-                if (_motions == null) _motions = new Dictionary<string, Motion>();
-                LibraryAnimations(xml, ref _motions);
-            }
+            if (_motions == null) _motions = new Dictionary<string, Motion>();
+            LibraryAnimations(xml, ref _motions);
 
             // (5) library_visual_scenes = bone hierarchy + rootBone
             _rootBone = LibraryVisualScenes(xml, invBindPoses);
+
+            // (6) source positions으로부터 
+            Matrix4x4f Mat_A0xS0 = _rootBone.LocalBindTransform * _bindShapeMatrix;
+            for (int i = 0; i < lstPositions.Count; i++)
+            {
+                lstPositions[i] = Mat_A0xS0.Multipy(lstPositions[i]);
+            }
 
             // 읽어온 정보의 인덱스를 이용하여 배열을 만든다.
             List<TexturedModel> texturedModels = new List<TexturedModel>();
@@ -218,30 +225,15 @@ namespace LSystem.Animate
                     texcoords[2 * i + 0] = lstTexCoord[tidx].x;
                     texcoords[2 * i + 1] = lstTexCoord[tidx].y;
 
-                    if (boneIndex < 0)
-                    {
-                        boneIndices[4 * i + 0] = (uint)lstBoneIndex[idx].x;
-                        boneIndices[4 * i + 1] = (uint)lstBoneIndex[idx].y;
-                        boneIndices[4 * i + 2] = (uint)lstBoneIndex[idx].z;
-                        boneIndices[4 * i + 3] = (uint)lstBoneIndex[idx].w;
+                    boneIndices[4 * i + 0] = (uint)lstBoneIndex[idx].x;
+                    boneIndices[4 * i + 1] = (uint)lstBoneIndex[idx].y;
+                    boneIndices[4 * i + 2] = (uint)lstBoneIndex[idx].z;
+                    boneIndices[4 * i + 3] = (uint)lstBoneIndex[idx].w;
 
-                        boneWeights[4 * i + 0] = (float)lstBoneWeight[idx].x;
-                        boneWeights[4 * i + 1] = (float)lstBoneWeight[idx].y;
-                        boneWeights[4 * i + 2] = (float)lstBoneWeight[idx].z;
-                        boneWeights[4 * i + 3] = (float)lstBoneWeight[idx].w;
-                    }
-                    else
-                    {
-                        boneIndices[4 * i + 0] = (uint)boneIndex;
-                        boneIndices[4 * i + 1] = 0;
-                        boneIndices[4 * i + 2] = 0;
-                        boneIndices[4 * i + 3] = 0;
-
-                        boneWeights[4 * i + 0] = 1.0f;
-                        boneWeights[4 * i + 1] = 0.0f;
-                        boneWeights[4 * i + 2] = 0.0f;
-                        boneWeights[4 * i + 3] = 0.0f;
-                    }
+                    boneWeights[4 * i + 0] = (float)lstBoneWeight[idx].x;
+                    boneWeights[4 * i + 1] = (float)lstBoneWeight[idx].y;
+                    boneWeights[4 * i + 2] = (float)lstBoneWeight[idx].z;
+                    boneWeights[4 * i + 3] = (float)lstBoneWeight[idx].w;
                 }
 
                 // 로딩한 postions, boneIndices, boneWeights를 버텍스로
@@ -269,7 +261,7 @@ namespace LSystem.Animate
 
                 string effect = materialToEffect[meshTriangles.Material].Replace("#", "");
                 string imageName = (effectToImage[effect]);
-                
+
                 if (textures.ContainsKey(imageName))
                 {
                     TexturedModel texturedModel = new TexturedModel(_rawModel, textures[imageName]);
@@ -277,7 +269,7 @@ namespace LSystem.Animate
                     texturedModels.Add(texturedModel);
                 }
             }
-            
+
             return texturedModels;
         }
 
@@ -485,8 +477,10 @@ namespace LSystem.Animate
         }
 
         private void LibraryController(XmlDocument xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
-            out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight)
+            out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight, out Matrix4x4f bindShapeMatrix)
         {
+            bindShapeMatrix = Matrix4x4f.Identity;
+
             lstBoneIndex = new List<Vertex4i>();
             lstBoneWeight = new List<Vertex4f>();
 
@@ -512,7 +506,8 @@ namespace LSystem.Animate
                 float[] eleValues = new float[eles.Length];
                 for (int i = 0; i < eles.Length; i++)
                     eleValues[i] = float.Parse(eles[i]);
-                _bindShapeMatrix = new Matrix4x4f(eleValues).Transposed;
+
+                bindShapeMatrix = new Matrix4x4f(eleValues).Transposed;
 
                 // joints 읽어옴.
                 foreach (XmlNode input in joints.ChildNodes)
@@ -827,6 +822,7 @@ namespace LSystem.Animate
             nStack.Push(rootNode);
             Bone rootBone = new Bone("Armature", 0);
             bStack.Push(rootBone);
+
             while (nStack.Count > 0)
             {
                 XmlNode node = nStack.Pop();
@@ -848,14 +844,14 @@ namespace LSystem.Animate
                     if (node.Attributes["name"].Value == "Armature")
                     {
                         bone.Name = "Armature";
-                        bone.BindTransform = mat;
+                        bone.LocalBindTransform = mat;
                         bone.Index = 0;
                     }
                 }
                 else
                 {
                     bone.Name = boneName;
-                    bone.BindTransform = mat;
+                    bone.LocalBindTransform = mat;
                     bone.Index = _dicBoneIndex.ContainsKey(boneName) ? _dicBoneIndex[boneName] : -1;
                 }
 
@@ -878,11 +874,14 @@ namespace LSystem.Animate
                 }
             }
 
+
             return rootBone;
         }
 
         private void LoadDefaultScaleTransform(string motionName, Dictionary<string, Dictionary<float, Matrix4x4f>> ani, float maxTimeLength)
         {
+            if (_dicBones==null) return;
+
             Motion animation = new Motion(motionName, maxTimeLength);
             if (maxTimeLength > 0)
             {
@@ -1019,7 +1018,7 @@ namespace LSystem.Animate
             }
 
             Motion animation = new Motion(motionName, maxTimeLength);
-            if (maxTimeLength > 0)
+            if (maxTimeLength > 0 && _dicBones != null)
             {
                 // 뼈마다 순회
                 foreach (KeyValuePair<string, Dictionary<float, Matrix4x4f>> item in ani)

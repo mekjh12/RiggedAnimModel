@@ -176,6 +176,11 @@ namespace LSystem
             m[3, 3] = mat.D4;
             return m;
         }
+        
+        public static Vertex3f Multipy(this Matrix4x4f mat, Vertex3f p)
+        {
+            return (mat * p.Vertex4f()).Vertex3f();
+        }
 
         /// <summary>
         /// 4x4행렬에서 3x3행렬의 회전행렬만 가져온다.

@@ -53,7 +53,7 @@ namespace LSystem
             trFov.Location = new System.Drawing.Point(this.glControl1.Right + margin, this.ckBoneBindPose.Bottom + margin);
             this.Controls.Add(trFov);
 
-            trAxisLength = new CTrackBar("AxisLength", 1, 6000, 1);
+            trAxisLength = new CTrackBar("AxisLength", 1, 60, 1);
             trAxisLength.Location = new System.Drawing.Point(this.trFov.Left, this.trFov.Bottom + margin);
             this.Controls.Add(trAxisLength);
 
@@ -109,8 +109,8 @@ namespace LSystem
 
                 _aniModel = new AniModel("main", daeEntity, xmlDae);
                 _aniModel.SetMotion(xmlDae.DefaultMotion.Name);
-                this.cbCharacter.Text = "heroNasty.dae"; // xmlDae.DefaultMotion.Name;
-                this.cbAction.Text = (string)this.cbAction.Items[0];
+                //this.cbCharacter.Text = "heroNasty.dae"; // xmlDae.DefaultMotion.Name;
+                //this.cbAction.Text = (string)this.cbAction.Items[0];
             }
 
 
@@ -262,7 +262,7 @@ namespace LSystem
                 // 사물에 대한 렌더링
                 foreach (Entity entity in _entities)
                 {
-                    Renderer.Render(_shader, entity, camera, Matrix4x4f.Identity);
+                    Renderer.Render(_shader, entity, camera);
                 }
 
                 Matrix4x4f[] jointMatrix = _aniModel.JointTransformMatrix;
@@ -278,11 +278,11 @@ namespace LSystem
                     {
                         Gl.Disable(EnableCap.CullFace);
                         if (_renderingMode == RenderingMode.Animation)
-                            Renderer.Render(_ashader, jointMatrix, _aniModel.PoseRootMatrix, mainEntity, camera);
+                            Renderer.Render(_ashader, jointMatrix, mainEntity, camera);
                         else if (_renderingMode == RenderingMode.BoneWeight)
-                            Renderer.Render(_bwShader, _aniModel.PoseRootMatrix, _boneIndex, mainEntity, camera);
+                            Renderer.Render(_bwShader, _boneIndex, mainEntity, camera);
                         else if (_renderingMode == RenderingMode.Static)
-                            Renderer.Render(_shader, mainEntity, camera, _aniModel.PoseRootMatrix);
+                            Renderer.Render(_shader, mainEntity, camera);
                         Gl.Enable(EnableCap.CullFace);
                     }
 
@@ -722,7 +722,8 @@ namespace LSystem
         private void button19_Click(object sender, EventArgs e)
         {
             Entity eye = _aniModel.Transplant(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\eye.dae", "mixamorig_Head");
-            //eye.PolygonMode = PolygonMode.Fill;
+            eye.PolygonMode = PolygonMode.Fill;
+            _entities.Add(eye);
         }
     }
 }

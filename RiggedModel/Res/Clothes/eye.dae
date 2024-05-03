@@ -5,8 +5,8 @@
       <author>Blender User</author>
       <authoring_tool>Blender 4.1.0 commit date:2024-03-25, commit time:20:42, hash:40a5e739e270</authoring_tool>
     </contributor>
-    <created>2024-05-01T17:40:59</created>
-    <modified>2024-05-01T17:40:59</modified>
+    <created>2024-05-02T17:48:41</created>
+    <modified>2024-05-02T17:48:41</modified>
     <unit name="meter" meter="1"/>
     <up_axis>Z_UP</up_axis>
   </asset>
@@ -94,20 +94,7 @@
     </geometry>
   </library_geometries>
   <library_visual_scenes>
-    <visual_scene id="Scene" name="Scene">
-      <node id="Eye_001" name="Eye.001" type="NODE">
-        <matrix sid="transform">135.7923 -3.01519e-14 -3.01519e-14 -1.511657 3.01519e-14 135.7923 1.61877e-5 2.81149e-9 3.01519e-14 -1.61877e-5 135.7923 -0.0209252 0 0 0 1</matrix>
-        <instance_geometry url="#Eye_002-mesh" name="Eye.001">
-          <bind_material>
-            <technique_common>
-              <instance_material symbol="Material_019-material" target="#Material_019-material">
-                <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
-              </instance_material>
-            </technique_common>
-          </bind_material>
-        </instance_geometry>
-      </node>
-    </visual_scene>
+    <visual_scene id="Scene" name="Scene"/>
   </library_visual_scenes>
   <scene>
     <instance_visual_scene url="#Scene"/>
