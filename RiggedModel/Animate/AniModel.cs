@@ -1,6 +1,7 @@
 ﻿using OpenGL;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace LSystem.Animate
 {
@@ -11,35 +12,51 @@ namespace LSystem.Animate
         int _jointCount;
         Animator _animator;
         XmlDae _xmlDae;
+        Transform _transform;
+        string _name;
 
-        public Entity Wear(string fileName, float expandValue = 0.00005f)
+        public string Name => _name;
+
+        public Transform Transform => _transform;
+
+        /// <summary>
+        /// Rendering Part 
+        /// </summary>
+        public enum RenderingMode { Animation, BoneWeight, Static, None, Count };
+        PolygonMode _polygonMode = PolygonMode.Fill;
+        RenderingMode _renderingMode = RenderingMode.Animation;
+        int _boneIndex = 0;
+        float _axisLength = 20.3f;
+        float _drawThick = 1.0f;
+
+        public int SelectedBoneIndex
         {
-            string name = Path.GetFileNameWithoutExtension(fileName);
-            List<TexturedModel> texturedModels = _xmlDae.WearCloth(fileName, expandValue);
-
-            Entity clothEntity = new Entity("aniModel_" + name, texturedModels[0]);
-            clothEntity.Material = new Material();
-            clothEntity.Position = Vertex3f.Zero;
-            clothEntity.IsAxisVisible = true;
-
-            if (_models.ContainsKey(name))
-            {
-                _models.Remove(name);
-                _models.Add(name, clothEntity);
-            }
-            else
-            {
-                _models.Add(name, clothEntity);
-            }
-
-            return clothEntity;
+            get => _boneIndex;
+            set => _boneIndex = value;
         }
 
-        public Entity Transplant(string fileName, string parentBoneName)
+        public PolygonMode PolygonMode
         {
-            string name = Path.GetFileNameWithoutExtension(fileName);
-            Bone parentBone = GetBoneByName(parentBoneName);
-            return null;
+            get => _polygonMode;
+            set => _polygonMode = value;
+        }
+
+        public RenderingMode RenderMode
+        {
+            get => _renderingMode;
+            set => _renderingMode = value;
+        }
+
+        public void PopPolygonMode()
+        {
+            _polygonMode++;
+            if (_polygonMode >= (PolygonMode)6915) _polygonMode = (PolygonMode)6912;
+        }
+
+        public void PopRenderingMode()
+        {
+            _renderingMode++;
+            if (_renderingMode == RenderingMode.Count - 1) _renderingMode = 0;
         }
 
         /// <summary>
@@ -83,6 +100,7 @@ namespace LSystem.Animate
             _rootBone = xmlDae.RootBone;
             _jointCount = xmlDae.BoneCount;
             _animator = new Animator(this);
+            _transform = new Transform();
         }
 
         /// <summary>
@@ -110,6 +128,89 @@ namespace LSystem.Animate
         public void Update(int deltaTime)
         {
             _animator.Update(0.001f * deltaTime);
+        }
+
+        public void Render(Camera camera, StaticShader staticShader, AnimateShader ashader, BoneWeightShader boneWeightShader, bool isSkinVisible, bool isBoneVisible)
+        {
+            Matrix4x4f[] jointMatrix = JointTransformMatrix;
+
+            foreach (KeyValuePair<string, Entity> item in _models)
+            {
+                Gl.PolygonMode(MaterialFace.FrontAndBack, _polygonMode);
+
+                Entity mainEntity = item.Value;// _aniModel.GetEntity("main");
+                Matrix4x4f modelMatrix = mainEntity.ModelMatrix;
+
+                if (isSkinVisible) // 스킨
+                {
+                    Gl.Disable(EnableCap.CullFace);
+                    if (_renderingMode == RenderingMode.Animation)
+                    {
+                        Renderer.Render(ashader, _transform.Matrix4x4f, jointMatrix, mainEntity, camera);
+                    }
+                    else if (_renderingMode == RenderingMode.BoneWeight)
+                    {
+                        Renderer.Render(boneWeightShader, _boneIndex, mainEntity, camera);
+                    }
+                    else if (_renderingMode == RenderingMode.Static)
+                    {
+                        Renderer.Render(staticShader, mainEntity, camera);
+                    }
+                    Gl.Enable(EnableCap.CullFace);
+                }
+
+                // 애니메이션 뼈대 렌더링
+                if (isBoneVisible)
+                {
+                    foreach (Matrix4x4f jointTransform in BoneAnimationTransforms)
+                    {
+                        Renderer.RenderLocalAxis(staticShader, camera, size: jointTransform.Column3.Vertex3f().Norm() * _axisLength,
+                            thick: _drawThick, modelMatrix * jointTransform);
+                    }
+                }
+
+                Renderer.RenderLocalAxis(staticShader, camera, size: 100.0f, thick: _drawThick, _rootBone.AnimatedTransform * _transform.Matrix4x4f);
+
+                /*
+                // 정지 뼈대
+                if (this.ckBoneBindPose.Checked)
+                {
+                    foreach (Matrix4x4f jointTransform in _aniModel.InverseBindPoseTransforms)
+                    {
+                        Renderer.RenderLocalAxis(_shader, camera, size: _axisLength, thick: _drawThick,
+                            entityModel * jointTransform.Inverse);
+                    }
+                }
+
+                // 부모와 현재 뼈대 렌더링
+                if (this.ckBoneParentCurrentVisible.Checked) 
+                {
+                    Bone cBone = GetBoneByName(this.cbBone.Text);
+                    Bone pBone = cBone.Parent;
+                    if (cBone != null)
+                    {
+                        Renderer.RenderLocalAxis(_shader, camera, size: cBone.AnimatedTransform.Column3.Vertex3f().Norm() * _axisLength, thick: _drawThick,
+                             entityModel * cBone.AnimatedTransform);
+                    }
+                    if (pBone != null)
+                    {
+                        Renderer.RenderLocalAxis(_shader, camera, size: pBone.AnimatedTransform.Column3.Vertex3f().Norm() * _axisLength, thick: _drawThick,
+                             entityModel * pBone.AnimatedTransform);
+                    }
+                }
+
+                if (_point != null)
+                {
+                    for (int i = 0; i < _point.Length; i++)
+                    {
+                        Vertex3f transPoint = (entityModel * _point[i].Position.Vertex4f()).Vertex3f();
+                        Renderer.RenderPoint(_shader, transPoint, camera, _point[i].Color4, _point[i].Size);
+                    }
+
+                    //Renderer.RenderPoint(_shader, _ikPoint, camera, color: new Vertex4f(1, 1, 0, 1), size: 0.02f);
+                }
+                */
+            }
         }
 
         /// <summary>
@@ -170,5 +271,37 @@ namespace LSystem.Animate
                 return jointMatrices;
             }
         }
+
+
+        public Entity Wear(string fileName, float expandValue = 0.01f)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            List<TexturedModel> texturedModels = _xmlDae.WearCloth(fileName, expandValue);
+
+            Entity clothEntity = new Entity("aniModel_" + name, texturedModels[0]);
+            clothEntity.Material = new Material();
+            clothEntity.Position = Vertex3f.Zero;
+            clothEntity.IsAxisVisible = true;
+
+            if (_models.ContainsKey(name))
+            {
+                _models.Remove(name);
+                _models.Add(name, clothEntity);
+            }
+            else
+            {
+                _models.Add(name, clothEntity);
+            }
+
+            return clothEntity;
+        }
+
+        public Entity Transplant(string fileName, string parentBoneName)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            Bone parentBone = GetBoneByName(parentBoneName);
+            return null;
+        }
+
     }
 }

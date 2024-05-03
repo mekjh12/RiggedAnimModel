@@ -17,13 +17,10 @@ namespace LSystem
         BoneWeightShader _bwShader;
 
         AniModel _aniModel;
+        AniModel _aniModel1;
+        AniModel _selectedAniModel;
         XmlDae xmlDae;
 
-        int _boneIndex = 0;
-        float _axisLength = 20.3f;
-        float _drawThick = 1.0f;
-
-        PolygonMode _polygonMode = PolygonMode.Fill;
         bool _isDraged = false;
         bool _isShifted = false;
         bool _isIkApply = false;
@@ -36,8 +33,6 @@ namespace LSystem
         CTrackBar trAxisLength;
         CTrackBar trAxisThick;
 
-        enum RenderingMode { Animation, BoneWeight, Static, None, Count };
-        RenderingMode _renderingMode = RenderingMode.Animation;
 
         public static float _rot = 0.0f;
 
@@ -101,14 +96,16 @@ namespace LSystem
                 xmlDae = new XmlDae(EngineLoop.PROJECT_PATH + $"\\Res\\{cbCharacter.Items[0]}", isLoadAnimation: false);
                 xmlDae.AddAction(EngineLoop.PROJECT_PATH + "\\Res\\Action\\Interpolation Pose.dae");
                 Entity daeEntity = new Entity("aniModel", xmlDae.Models.ToArray());
-                daeEntity.Material = new Material();
-                daeEntity.Position = new Vertex3f(0.3f, 0.4f, 0);
-                daeEntity.Yaw(0);
-                daeEntity.Roll(0);
-                daeEntity.IsAxisVisible = true;
 
-                _aniModel = new AniModel("main", daeEntity, xmlDae);
+                _aniModel = new AniModel("main1", daeEntity, xmlDae);
                 _aniModel.SetMotion(xmlDae.DefaultMotion.Name);
+
+                Entity daeEntity1 = new Entity("aniModel1", xmlDae.Models.ToArray());
+                daeEntity1.Position = new Vertex3f(1, 2, 0);
+                _aniModel1 = new AniModel("main2", daeEntity1, xmlDae);
+                _aniModel1.SetMotion(xmlDae.DefaultMotion.Name);
+
+                _selectedAniModel = _aniModel;
                 //this.cbCharacter.Text = "heroNasty.dae"; // xmlDae.DefaultMotion.Name;
                 //this.cbAction.Text = (string)this.cbAction.Items[0];
             }
@@ -129,10 +126,10 @@ namespace LSystem
             this.ckBoneParentCurrentVisible.Checked = bool.Parse(IniFile.GetPrivateProfileString("control", "isvisibleCPBone", "true"));
             this.nmChainLength.Value = (decimal)IniFile.GetPrivateProfileFloat("control", "ChainLength", 3.0f);
             this.nmIternation.Value = (decimal)IniFile.GetPrivateProfileFloat("control", "Iternation", 1.0f);
-            _renderingMode = (RenderingMode)int.Parse(IniFile.GetPrivateProfileString("Rendering", "RenderingMode", "0"));
-            _drawThick = float.Parse(IniFile.GetPrivateProfileString("Rendering", "drawThick", "1.0"));
-            _axisLength = float.Parse(IniFile.GetPrivateProfileString("Rendering", "axisLength", "1.0"));
-            _polygonMode = (PolygonMode)int.Parse(IniFile.GetPrivateProfileString("PolygonMode", "PolygonMode", "6912"));
+            //_renderingMode = (RenderingMode)int.Parse(IniFile.GetPrivateProfileString("Rendering", "RenderingMode", "0"));
+            //_drawThick = float.Parse(IniFile.GetPrivateProfileString("Rendering", "drawThick", "1.0"));
+            //_axisLength = float.Parse(IniFile.GetPrivateProfileString("Rendering", "axisLength", "1.0"));
+            //_polygonMode = (PolygonMode)int.Parse(IniFile.GetPrivateProfileString("PolygonMode", "PolygonMode", "6912"));
 
             float px = float.Parse(IniFile.GetPrivateProfileString("PickupPoint", "x", "1.0"));
             float py = float.Parse(IniFile.GetPrivateProfileString("PickupPoint", "y", "1.0"));
@@ -157,18 +154,18 @@ namespace LSystem
 
             trAxisLength.ValueChanged += (oo, ee) =>
             {
-                _axisLength = trAxisLength.Value * 0.1f;
-                IniFile.WritePrivateProfileString("Rendering", "axisLength", _axisLength);
+                //_axisLength = trAxisLength.Value * 0.1f;
+                //IniFile.WritePrivateProfileString("Rendering", "axisLength", _axisLength);
             };
 
             trAxisThick.ValueChanged += (oo, ee) =>
             {
-                _drawThick = (float)trAxisThick.Value * 0.01f;
-                IniFile.WritePrivateProfileString("Rendering", "drawThick", _drawThick);
+                //_drawThick = (float)trAxisThick.Value * 0.01f;
+                //IniFile.WritePrivateProfileString("Rendering", "drawThick", _drawThick);
             };
 
             this.trFov.Value = (int)fov;
-            this.trAxisLength.Value = (int)(_axisLength * 10.0f);
+            //this.trAxisLength.Value = (int)(_axisLength * 10.0f);
 
             trFov.Draw();
             trAxisLength.Draw();
@@ -199,7 +196,9 @@ namespace LSystem
                 }
 
                 _aniModel.Update(deltaTime);
-                
+                _aniModel1.Update(deltaTime);
+
+
                 if (_isIkApply)
                 {
                     Bone boneEnd = _aniModel.GetBoneByName(this.cbBone.Text);
@@ -265,78 +264,12 @@ namespace LSystem
                     Renderer.Render(_shader, entity, camera);
                 }
 
-                Matrix4x4f[] jointMatrix = _aniModel.JointTransformMatrix;
+                _aniModel.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
+                _aniModel1.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
 
-                foreach (KeyValuePair<string, Entity> item in _aniModel.Entities)
-                {
-                    Gl.PolygonMode(MaterialFace.FrontAndBack, _polygonMode);
 
-                    Entity mainEntity = item.Value;// _aniModel.GetEntity("main");
-                    Matrix4x4f entityModel = mainEntity.ModelMatrix;
 
-                    if (this.ckSkinVisible.Checked) // 스킨
-                    {
-                        Gl.Disable(EnableCap.CullFace);
-                        if (_renderingMode == RenderingMode.Animation)
-                            Renderer.Render(_ashader, jointMatrix, mainEntity, camera);
-                        else if (_renderingMode == RenderingMode.BoneWeight)
-                            Renderer.Render(_bwShader, _boneIndex, mainEntity, camera);
-                        else if (_renderingMode == RenderingMode.Static)
-                            Renderer.Render(_shader, mainEntity, camera);
-                        Gl.Enable(EnableCap.CullFace);
-                    }
 
-                    if (this.ckBoneBindPose.Checked) // 정지 뼈대
-                    {
-                        foreach (Matrix4x4f jointTransform in _aniModel.InverseBindPoseTransforms)
-                        {
-                            Renderer.RenderLocalAxis(_shader, camera, size: _axisLength, thick: _drawThick,
-                                entityModel * jointTransform.Inverse);
-                        }
-                    }
-
-                    if (this.ckBoneVisible.Checked) // 애니메이션 뼈대 렌더링
-                    {
-                        foreach (Matrix4x4f jointTransform in _aniModel.BoneAnimationTransforms)
-                        {
-                            Renderer.RenderLocalAxis(_shader, camera, size: jointTransform.Column3.Vertex3f().Norm() * _axisLength, 
-                                thick: _drawThick, entityModel * jointTransform);
-                        }
-                    }
-
-                    if (this.ckBoneParentCurrentVisible.Checked) // 부모와 현재 뼈대 렌더링
-                    {
-                        Bone cBone = _aniModel.GetBoneByName(this.cbBone.Text);
-                        Bone pBone = cBone.Parent;
-                        if (cBone != null)
-                        {
-                            Renderer.RenderLocalAxis(_shader, camera, size: cBone.AnimatedTransform.Column3.Vertex3f().Norm() * _axisLength, thick: _drawThick,
-                                 entityModel * cBone.AnimatedTransform);
-                        }
-                        if (pBone != null)
-                        {
-                            Renderer.RenderLocalAxis(_shader, camera, size: pBone.AnimatedTransform.Column3.Vertex3f().Norm() * _axisLength, thick: _drawThick,
-                                 entityModel * pBone.AnimatedTransform);
-                        }
-                    }
-
-                    if (_point != null)
-                    {
-                        for (int i = 0; i < _point.Length; i++)
-                        {
-                            Vertex3f transPoint = (entityModel * _point[i].Position.Vertex4f()).Vertex3f();
-                            Renderer.RenderPoint(_shader, transPoint, camera, _point[i].Color4, _point[i].Size);
-                        }
-
-                        //Renderer.RenderPoint(_shader, _ikPoint, camera, color: new Vertex4f(1, 1, 0, 1), size: 0.02f);
-                    }
-                }
-
-                
-
-               
-
-                
             };
 
         }
@@ -390,19 +323,19 @@ namespace LSystem
             }
             else if (e.KeyCode == Keys.H)
             {
-                _aniModel.Entities["main"].Roll(1);
+                _selectedAniModel?.Transform.Roll(1);
             }
             else if (e.KeyCode == Keys.K)
             {
-                _aniModel.Entities["main"].Roll(-1);
+                _selectedAniModel?.Transform.Roll(-1);
             }
             else if (e.KeyCode == Keys.U)
             {
-                _aniModel.Entities["main"].IncreasePosition(0, 0.05f, 0);
+                _selectedAniModel?.Transform.IncreasePosition(0, 0.05f, 0);
             }
             else if (e.KeyCode == Keys.J)
             {
-                _aniModel.Entities["main"].IncreasePosition(0, -0.05f, 0);
+                _selectedAniModel?.Transform.IncreasePosition(0, -0.05f, 0);
             }
             else if (e.KeyCode == Keys.I)
             {
@@ -410,53 +343,56 @@ namespace LSystem
             }
             else if (e.KeyCode == Keys.F)
             {
-                _polygonMode++;
-                IniFile.WritePrivateProfileString("PolygonMode", "PolygonMode", (int)_polygonMode);
-                if (_polygonMode >= (PolygonMode)6915) _polygonMode = (PolygonMode)6912;
+                IniFile.WritePrivateProfileString("PolygonMode", "PolygonMode", (int)_selectedAniModel.PolygonMode);
+                _selectedAniModel?.PopPolygonMode();
             }
             else if (e.KeyCode == Keys.Space)
             {
-                _aniModel.Animator.Toggle();
+                _selectedAniModel?.Animator.Toggle();
             }
             else if (e.KeyCode == Keys.Oemplus)
             {
-                _boneIndex++;
-                Console.WriteLine(_boneIndex);
+                _selectedAniModel.SelectedBoneIndex++;
+                Console.WriteLine(_selectedAniModel.SelectedBoneIndex);
             }
             else if (e.KeyCode == Keys.OemMinus)
             {
-                _boneIndex--;
-                Console.WriteLine(_boneIndex);
+                _selectedAniModel.SelectedBoneIndex--;
+                Console.WriteLine(_selectedAniModel.SelectedBoneIndex);
             }
             else if (e.KeyCode == Keys.R)
             {
-                _renderingMode++;
-                if (_renderingMode == RenderingMode.Count) _renderingMode = 0;
-                IniFile.WritePrivateProfileString("Rendering", "RenderingMode", (int)_renderingMode);
+                IniFile.WritePrivateProfileString("Rendering", "RenderingMode", (int)_aniModel.RenderMode);
+                _selectedAniModel.PopRenderingMode();
             }
             else if (e.KeyCode == Keys.Z)
             {
-                _aniModel.Animator.Play();
+                _selectedAniModel.Animator.Play();
                 _gameLoop.Update(-10);
-                _aniModel.Animator.Stop();
+                _selectedAniModel.Animator.Stop();
             }
             else if (e.KeyCode == Keys.X)
             {
-                _aniModel.Animator.Play();
+                _selectedAniModel.Animator.Play();
                 _gameLoop.Update(-100);
-                _aniModel.Animator.Stop();
+                _selectedAniModel.Animator.Stop();
             }
             else if (e.KeyCode == Keys.C)
             {
-                _aniModel.Animator.Play();
+                _selectedAniModel.Animator.Play();
                 _gameLoop.Update(100);
-                _aniModel.Animator.Stop();
+                _selectedAniModel.Animator.Stop();
             }
             else if (e.KeyCode == Keys.V)
             {
-                _aniModel.Animator.Play();
+                _selectedAniModel.Animator.Play();
                 _gameLoop.Update(10);
-                _aniModel.Animator.Stop();
+                _selectedAniModel.Animator.Stop();
+            }
+            else if (e.KeyCode == Keys.D1)
+            {
+                _selectedAniModel = (_selectedAniModel == _aniModel) ? _aniModel1 : _aniModel;
+                Console.WriteLine(_selectedAniModel.Name);
             }
             else if (e.KeyCode == Keys.D3)
             {

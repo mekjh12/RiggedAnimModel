@@ -2,32 +2,29 @@
 using Assimp.Configs;
 using OpenGL;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace LSystem.Animate
 {
     public class XmlDae
     {
         string _filename; // dae
-        string _diffuseFileName;
-        
+        string _diffuseFileName;        
         Dictionary<string, Motion> _motions;
-
         List<TexturedModel> _texturedModels;
-
         RawModel3d _rawModel;
-
         Bone _rootBone;
         Dictionary<string, int> _dicBoneIndex;
         Dictionary<string, Bone> _dicBones;
         string[] _boneNames;
-        Matrix4x4f _bindShapeMatrix;
-        
-        float _hipScaled = 1.0f;    // 비율을 얻는다.
-
+        Matrix4x4f _bindShapeMatrix;        
+        float _hipScaled = 1.0f; // 비율을 얻는다.
         List<Vertex3f> _vertices;
         List<Vertex4f> _boneIndices;
         List<Vertex4f> _boneWeights;
@@ -43,13 +40,6 @@ namespace LSystem.Animate
         public Bone GetBoneByName(string boneName) => _dicBones[boneName];
 
         public Dictionary<string, Bone> DicBones => _dicBones;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public Matrix4x4f BindShapeMatrix => _bindShapeMatrix;
-
-        public Matrix4x4f RootMatirix => (_rootBone == null) ? Matrix4x4f.Identity : _rootBone.LocalBindTransform;
 
         public Bone RootBone => _rootBone;
 
@@ -132,7 +122,16 @@ namespace LSystem.Animate
                 lstBoneIndex[i] = new Vertex4i(bx, by, bz, bw);
             }
 
-            // (5) 읽어온 정보의 인덱스를 이용하여 배열을 만든다.
+            // (5) source positions으로부터 
+            Matrix4x4f A0 = _rootBone.LocalBindTransform;
+            Matrix4x4f S = _bindShapeMatrix;
+            Matrix4x4f A0xS = A0 * S;
+            for (int i = 0; i < lstPositions.Count; i++)
+            {
+                lstPositions[i] = A0xS.Multipy(lstPositions[i]);
+            }
+
+            // (6) 읽어온 정보의 인덱스를 이용하여 배열을 만든다.
             List<TexturedModel> texturedModels = new List<TexturedModel>();
             foreach (MeshTriangles meshTriangles in meshes)
             {
@@ -178,6 +177,7 @@ namespace LSystem.Animate
             List<MeshTriangles> meshes = LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
 
             // (3) library_controllers = boneNames, InvBindPoses, boneIndex, boneWeight
+            // invBindPoses는 계산할 수 있으므로 생략가능하다.
             LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
                     out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight, out Matrix4x4f bindShapeMatrix);
             _bindShapeMatrix = bindShapeMatrix;
@@ -199,13 +199,27 @@ namespace LSystem.Animate
             _rootBone = LibraryVisualScenes(xml, invBindPoses);
 
             // (6) source positions으로부터 
-            Matrix4x4f Mat_A0xS0 = _rootBone.LocalBindTransform * _bindShapeMatrix;
+            Matrix4x4f A0 = _rootBone.LocalBindTransform;
+            Matrix4x4f S = _bindShapeMatrix;
+            Matrix4x4f A0xS = A0 * S;
             for (int i = 0; i < lstPositions.Count; i++)
             {
-                lstPositions[i] = Mat_A0xS0.Multipy(lstPositions[i]);
+                lstPositions[i] = A0xS.Multipy(lstPositions[i]);
             }
 
-            // 읽어온 정보의 인덱스를 이용하여 배열을 만든다.
+            // (7) invBindPose 행렬을 계산한다.
+            Stack<Bone> bStack = new Stack<Bone>();
+            bStack.Push(_rootBone);
+            while (bStack.Count > 0)
+            {
+                Bone cBone = bStack.Pop();
+                Matrix4x4f prevAnimatedMat = (cBone.Parent == null ? Matrix4x4f.Identity : cBone.Parent.AnimatedBindTransform);
+                cBone.AnimatedBindTransform = prevAnimatedMat * cBone.LocalBindTransform;
+                cBone.InverseBindTransform = (cBone.AnimatedBindTransform * 1000.0f).Inverse * 1000.0f;
+                foreach (Bone child in cBone.Childrens) bStack.Push(child);
+            }
+
+            // 읽어온 정보의 인덱스를 이용하여 GPU에 데이터를 전송한다.
             List<TexturedModel> texturedModels = new List<TexturedModel>();
             foreach (MeshTriangles meshTriangles in meshes)
             {

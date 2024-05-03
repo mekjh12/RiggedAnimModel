@@ -99,6 +99,7 @@
     <Compile Include="Animate\Kinetics.cs" />
     <Compile Include="Animate\ObjLoader.cs" />
     <Compile Include="Animate\TextureStorage.cs" />
+    <Compile Include="Animate\Transform.cs" />
     <Compile Include="Animate\XmlDae.cs" />
     <Compile Include="Common\IniFile.cs" />
     <Compile Include="CTrackBar.cs">

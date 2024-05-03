@@ -17,12 +17,21 @@ namespace LSystem.Animate
 
         Matrix4x4f _localTransform = Matrix4x4f.Identity;
         Matrix4x4f _animatedTransform = Matrix4x4f.Identity;
+
         Matrix4x4f _localBindTransform = Matrix4x4f.Identity;
+        Matrix4x4f _animatedBindTransform = Matrix4x4f.Identity;
+
         Matrix4x4f _inverseBindTransform = Matrix4x4f.Identity;
 
         BoneAngle _restrictAngle;
 
-        
+
+        public Matrix4x4f AnimatedBindTransform
+        {
+            get => _animatedBindTransform;
+            set => _animatedBindTransform = value;
+        }
+
         public BoneAngle RestrictAngle
         {
             get => _restrictAngle;

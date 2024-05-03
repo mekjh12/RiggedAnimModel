@@ -171,7 +171,7 @@ namespace LSystem
             shader.Unbind();
         }
 
-        public static void Render(AnimateShader shader, Matrix4x4f[] jointTransforms, Entity entity, Camera camera)
+        public static void Render(AnimateShader shader, Matrix4x4f bindShapeMatrix,  Matrix4x4f[] jointTransforms, Entity entity, Camera camera)
         {
             if (entity == null) return;
 
@@ -179,7 +179,7 @@ namespace LSystem
 
             shader.Bind();
 
-            shader.LoadModelMatrix(entity.ModelMatrix);
+            shader.LoadModelMatrix(entity.ModelMatrix * bindShapeMatrix);
             shader.LoadViewMatrix(camera.ViewMatrix);
             shader.LoadProjMatrix(camera.ProjectiveMatrix);
 

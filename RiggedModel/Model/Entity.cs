@@ -81,6 +81,7 @@ namespace LSystem
             _guid = GUID.GenID;
             _scale = Vertex3f.One;
             _pose.Postiton = Vertex3f.Zero;
+            _material = Material.White;
 
             if (_models == null) 
                 _models = new List<RawModel3d>();
