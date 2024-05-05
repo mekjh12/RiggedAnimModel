@@ -197,7 +197,7 @@ namespace LSystem.Animate
         public void UpdateLocalTransform()
         {
             if (_parent != null)
-                _localTransform = (_parent._animatedTransform * 100.0f).Inverse * 100.0f * _animatedTransform;
+                _localTransform = (_parent._animatedTransform * 1000.0f).Inverse * 1000.0f * _animatedTransform;
             else
                 _localTransform = _animatedTransform;
         }

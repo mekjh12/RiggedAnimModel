@@ -14,6 +14,18 @@ namespace LSystem.Animate
 
         public KeyFrame LastKeyFrame => (_keyframes.Values.Count > 0) ? _keyframes.Values.ElementAt(_keyframes.Count - 1) : null;
 
+        public KeyFrame MiddleKeyFrame
+        {
+            get
+            {
+                int numKeyFrame = _keyframes.Count;
+                int idx = (int)(numKeyFrame / 2.0f);
+                return _keyframes.Values.ElementAt(idx);
+            }
+        }
+
+        public Dictionary<float, KeyFrame> Keyframes => _keyframes;
+
         public float Length => _length;
 
         public string Name => _animationName;

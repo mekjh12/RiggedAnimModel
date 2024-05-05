@@ -162,6 +162,131 @@ namespace LSystem.Animate
             return motionName;
         }
 
+        public Bone AddBone(string boneName, int boneIndex, string parentBoneName, Matrix4x4f localPivotBindTransform, 
+            Matrix4x4f localBindTransform)
+        {
+            Bone parentBone = GetBoneByName(parentBoneName);
+            Bone cBone = new Bone(boneName, boneIndex);
+            parentBone.AddChild(cBone);
+            cBone.Parent = parentBone;
+            cBone.LocalBindTransform = localBindTransform;
+            Matrix4x4f m = parentBone.AnimatedBindTransform * localPivotBindTransform;
+            cBone.InverseBindTransform = (m * 1000.0f).Inverse * 1000.0f;
+            _dicBones.Add(boneName, cBone);
+
+            List<string> boneNameList = new List<string>();
+            for (int i = 0; i < _boneNames.Length; i++) boneNameList.Add(_boneNames[i]);
+            boneNameList.Add(boneName);
+            _boneNames = boneNameList.ToArray();
+
+            return cBone;
+        }
+
+        public List<TexturedModel> LoadFileOnly(string filename, int boneIndex, byte mirror = 0)
+        {
+            XmlDocument xml = new XmlDocument();
+            xml.Load(filename);
+
+            // (1) library_images = textures
+            Dictionary<string, Texture> textures = LibraryImages(xml);
+            Dictionary<string, string> materialToEffect = LoadMaterials(xml);
+            Dictionary<string, string> effectToImage = LoadEffect(xml);
+
+            // (2) library_geometries = position, normal, texcoord, color
+            List<MeshTriangles> meshes = LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
+
+            // (3) library_controllers = boneNames, InvBindPoses, boneIndex, boneWeight
+            // invBindPoses는 계산할 수 있으므로 생략가능하다.
+            LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
+                    out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight, out Matrix4x4f bindShapeMatrix);
+
+            // (5) library_visual_scenes = bone hierarchy + rootBone
+            //Bone rootBone = LibraryVisualScenes(xml, invBindPoses);
+
+            // (6) source positions으로부터 
+            Matrix4x4f A0 = _rootBone.LocalBindTransform;
+            Matrix4x4f A0xS = A0 * bindShapeMatrix;
+            for (int i = 0; i < lstPositions.Count; i++)
+            {
+                lstPositions[i] = A0xS.Multipy(lstPositions[i]);
+
+                // mirror처리
+                float px = lstPositions[i].x;
+                float py = lstPositions[i].y;
+                float pz = lstPositions[i].z;
+
+                if (mirror >> 2 == 1) // x mirror
+                    lstPositions[i] = new Vertex3f(-px, py, pz);
+
+            }
+
+
+            // 읽어온 정보의 인덱스를 이용하여 GPU에 데이터를 전송한다.
+            List<TexturedModel> texturedModels = new List<TexturedModel>();
+            foreach (MeshTriangles meshTriangles in meshes)
+            {
+                int count = meshTriangles.Vertices.Count;
+                float[] postions = new float[count * 3];
+                float[] texcoords = new float[count * 2];
+                uint[] boneIndices = new uint[count * 4];
+                float[] boneWeights = new float[count * 4];
+                for (int i = 0; i < count; i++)
+                {
+                    int idx = (int)meshTriangles.Vertices[i];
+                    int tidx = (int)meshTriangles.Texcoords[i];
+                    postions[3 * i + 0] = lstPositions[idx].x;
+                    postions[3 * i + 1] = lstPositions[idx].y;
+                    postions[3 * i + 2] = lstPositions[idx].z;
+
+                    texcoords[2 * i + 0] = lstTexCoord[tidx].x;
+                    texcoords[2 * i + 1] = lstTexCoord[tidx].y;
+
+                    boneIndices[4 * i + 0] = (uint)boneIndex;
+                    boneIndices[4 * i + 1] = 0;
+                    boneIndices[4 * i + 2] = 0;
+                    boneIndices[4 * i + 3] = 0;
+                    boneWeights[4 * i + 0] = 1.0f;
+                    boneWeights[4 * i + 1] = 0.0f;
+                    boneWeights[4 * i + 2] = 0.0f;
+                    boneWeights[4 * i + 3] = 0.0f;
+                }
+
+                // 로딩한 postions, boneIndices, boneWeights를 버텍스로
+                _vertices = new List<Vertex3f>();
+                _boneIndices = new List<Vertex4f>();
+                _boneWeights = new List<Vertex4f>();
+                int vertexNum = postions.Length / 3;
+                for (int i = 0; i < vertexNum; i++)
+                {
+                    _vertices.Add(new Vertex3f(postions[i * 3 + 0], postions[i * 3 + 1], postions[i * 3 + 2]));
+                    _boneIndices.Add(new Vertex4f(boneIndices[i * 4 + 0], boneIndices[i * 4 + 1], boneIndices[i * 4 + 2], boneIndices[i * 4 + 3]));
+                    _boneWeights.Add(new Vertex4f(boneWeights[i * 4 + 0], boneWeights[i * 4 + 1], boneWeights[i * 4 + 2], boneWeights[i * 4 + 3]));
+                }
+
+                // VAO, VBO로 Raw3d 모델을 만든다.
+                uint vao = Gl.GenVertexArray();
+                Gl.BindVertexArray(vao);
+                GpuLoader.StoreDataInAttributeList(0, 3, postions, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(1, 2, texcoords, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(3, 4, boneIndices, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(4, 4, boneWeights, BufferUsage.StaticDraw);
+                //GpuLoader.BindIndicesBuffer(lstVertexIndices.ToArray());
+                Gl.BindVertexArray(0);
+                _rawModel = new RawModel3d(vao, postions);
+
+                string effect = materialToEffect[meshTriangles.Material].Replace("#", "");
+                string imageName = (effectToImage[effect]);
+
+                if (textures.ContainsKey(imageName))
+                {
+                    TexturedModel texturedModel = new TexturedModel(_rawModel, textures[imageName]);
+                    texturedModel.IsDrawElement = false;
+                    texturedModels.Add(texturedModel);
+                }
+            }
+
+            return texturedModels;
+        }
 
         public List<TexturedModel> LoadFile(string filename)
         {

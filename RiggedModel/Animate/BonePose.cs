@@ -28,6 +28,13 @@ namespace LSystem.Animate
             set => _rotation = value;
         }
 
+        public BonePose(Vertex3f position)
+        {
+            _position = position;
+            _rotation = new Quaternion(Vertex3f.UnitX, 0);
+            _scaling = Vertex3f.One;
+        }
+
         public BonePose(Vertex3f position, Quaternion rotation)
         {
             _position = position;

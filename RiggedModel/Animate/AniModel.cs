@@ -1,7 +1,10 @@
-﻿using OpenGL;
+﻿using Assimp;
+using OpenGL;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Xml.Linq;
 
 namespace LSystem.Animate
 {
@@ -9,7 +12,6 @@ namespace LSystem.Animate
     {
         Dictionary<string, Entity> _models;
         Bone _rootBone;
-        int _jointCount;
         Animator _animator;
         XmlDae _xmlDae;
         Transform _transform;
@@ -26,8 +28,12 @@ namespace LSystem.Animate
         PolygonMode _polygonMode = PolygonMode.Fill;
         RenderingMode _renderingMode = RenderingMode.Animation;
         int _boneIndex = 0;
-        float _axisLength = 20.3f;
+        float _axisLength = 10.3f;
         float _drawThick = 1.0f;
+
+        public int BoneCount => _xmlDae.BoneCount;
+
+        public Motion CurrentMotion => _animator.CurrentMotion;
 
         public int SelectedBoneIndex
         {
@@ -98,7 +104,7 @@ namespace LSystem.Animate
 
             _xmlDae = xmlDae;
             _rootBone = xmlDae.RootBone;
-            _jointCount = xmlDae.BoneCount;
+            //_boneCount = xmlDae.BoneCount;
             _animator = new Animator(this);
             _transform = new Transform();
         }
@@ -138,9 +144,9 @@ namespace LSystem.Animate
             {
                 Gl.PolygonMode(MaterialFace.FrontAndBack, _polygonMode);
 
-                Entity mainEntity = item.Value;// _aniModel.GetEntity("main");
+                Entity mainEntity = item.Value;
                 Matrix4x4f modelMatrix = mainEntity.ModelMatrix;
-
+                
                 if (isSkinVisible) // 스킨
                 {
                     Gl.Disable(EnableCap.CullFace);
@@ -165,7 +171,7 @@ namespace LSystem.Animate
                     foreach (Matrix4x4f jointTransform in BoneAnimationTransforms)
                     {
                         Renderer.RenderLocalAxis(staticShader, camera, size: jointTransform.Column3.Vertex3f().Norm() * _axisLength,
-                            thick: _drawThick, modelMatrix * jointTransform);
+                            thick: _drawThick, _transform.Matrix4x4f * modelMatrix * jointTransform);
                     }
                 }
 
@@ -219,11 +225,11 @@ namespace LSystem.Animate
         /// * v' = Ma(i) Md^-1(i) v (Ma 애니메이션행렬, Md 바이딩포즈행렬)<br/>
         /// * 정점들을 바인딩포즈행렬을 이용하여 뼈 공간으로 정점을 변환 후, 애니메이션 행렬을 이용하여 뼈의 캐릭터 공간으로의 변환행렬을 가져온다.<br/>
         /// </summary>
-        public Matrix4x4f[] JointTransformMatrix
+        private Matrix4x4f[] JointTransformMatrix
         {
             get
             {
-                Matrix4x4f[] jointMatrices = new Matrix4x4f[_jointCount];
+                Matrix4x4f[] jointMatrices = new Matrix4x4f[BoneCount];
                 foreach (KeyValuePair<string, Bone> item in _xmlDae.DicBones)
                 {
                     Bone bone = item.Value;
@@ -242,7 +248,7 @@ namespace LSystem.Animate
         {
             get
             {
-                Matrix4x4f[] jointMatrices = new Matrix4x4f[_jointCount];
+                Matrix4x4f[] jointMatrices = new Matrix4x4f[BoneCount];
                 foreach (KeyValuePair<string, Bone> item in _xmlDae.DicBones)
                 {
                     Bone bone = item.Value;
@@ -261,46 +267,52 @@ namespace LSystem.Animate
         {
             get
             { 
-                Matrix4x4f[] jointMatrices = new Matrix4x4f[_jointCount];
+                Matrix4x4f[] jointMatrices = new Matrix4x4f[BoneCount];
                 foreach (KeyValuePair<string, Bone> item in _xmlDae.DicBones)
                 {
                     Bone bone = item.Value;
-                    if (bone.Index >=0 && bone.Index <_jointCount)
+                    if (bone.Index >=0 && bone.Index < BoneCount)
                         jointMatrices[bone.Index] = bone.InverseBindTransform;
                 }
                 return jointMatrices;
             }
         }
 
-
-        public Entity Wear(string fileName, float expandValue = 0.01f)
+        private void AddEntity(string name, Entity entity)
         {
-            string name = Path.GetFileNameWithoutExtension(fileName);
-            List<TexturedModel> texturedModels = _xmlDae.WearCloth(fileName, expandValue);
-
-            Entity clothEntity = new Entity("aniModel_" + name, texturedModels[0]);
-            clothEntity.Material = new Material();
-            clothEntity.Position = Vertex3f.Zero;
-            clothEntity.IsAxisVisible = true;
-
             if (_models.ContainsKey(name))
             {
                 _models.Remove(name);
-                _models.Add(name, clothEntity);
+                _models.Add(name, entity);
             }
             else
             {
-                _models.Add(name, clothEntity);
+                _models.Add(name, entity);
             }
+        }
 
+        public Entity Attach(string fileName, float expandValue = 0.01f)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            List<TexturedModel> texturedModels = _xmlDae.WearCloth(fileName, expandValue);
+            Entity clothEntity = new Entity("aniModel_" + name, texturedModels[0]);
+            AddEntity(name, clothEntity);
             return clothEntity;
         }
 
-        public Entity Transplant(string fileName, string parentBoneName)
+        public void Transplant(string fileName, string parentBoneName)
         {
             string name = Path.GetFileNameWithoutExtension(fileName);
-            Bone parentBone = GetBoneByName(parentBoneName);
-            return null;
+
+            string boneName = name + "Left";
+            Bone LEyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName, Matrix4x4f.Translated(4.799998f, 11.8f, 11.70002f), Matrix4x4f.Translated(4.799998f, 11.8f, 11.70002f));
+            Entity EntityL = new Entity(boneName, _xmlDae.LoadFileOnly(fileName, LEyeBone.Index)[0]);
+            AddEntity(boneName, EntityL);
+
+            boneName = name + "Right";
+            Bone REyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName, Matrix4x4f.Translated(-4.799998f, 11.8f, 11.70002f), Matrix4x4f.Translated(-4.799998f, 11.8f, 11.70002f));
+            Entity EntityR = new Entity(boneName, _xmlDae.LoadFileOnly(fileName, REyeBone.Index, mirror: 0b_100)[0]);
+            AddEntity(boneName, EntityR);
         }
 
     }

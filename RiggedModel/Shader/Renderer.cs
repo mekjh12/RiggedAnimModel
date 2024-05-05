@@ -56,7 +56,7 @@ namespace LSystem
 
         public static void RenderPoint(StaticShader shader, Vertex3f point,  Camera camera, Vertex4f color, float size = 0.1f)
         {
-            Gl.Disable(EnableCap.DepthTest);
+            //Gl.Disable(EnableCap.DepthTest);
             shader.Bind();
 
             shader.LoadProjMatrix(camera.ProjectiveMatrix);
@@ -75,7 +75,7 @@ namespace LSystem
             Gl.BindVertexArray(0);
 
             shader.Unbind();
-            Gl.Enable(EnableCap.DepthTest);
+            //Gl.Enable(EnableCap.DepthTest);
             shader.LoadIsTextured(true);
 
         }

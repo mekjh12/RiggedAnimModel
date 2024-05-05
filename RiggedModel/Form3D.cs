@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Xml.Linq;
 
 namespace LSystem
 {
@@ -27,6 +28,7 @@ namespace LSystem
 
         ColorPoint[] _point;
         Vertex3f _ikPoint = new Vertex3f(0.6f, 0.0f, 1.8f);
+        Vertex3f _centerPoint = new Vertex3f(0.0f, 0.0f, 0.0f);
         float _theta = 0.0f;
 
         CTrackBar trFov;
@@ -171,8 +173,8 @@ namespace LSystem
             trAxisLength.Draw();
             trAxisThick.Draw();
 
-            //this.cbCharacter.SelectedIndex = 0;
-            //this.cbAction.SelectedIndex = 0;
+            this.cbCharacter.SelectedIndex = 0;
+            this.cbAction.SelectedIndex = 0;
             foreach (string boneName in xmlDae.BoneNames)
             {
                 this.cbBone.Items.Add(boneName);
@@ -196,7 +198,7 @@ namespace LSystem
                 }
 
                 _aniModel.Update(deltaTime);
-                _aniModel1.Update(deltaTime);
+                //_aniModel1.Update(deltaTime);
 
 
                 if (_isIkApply)
@@ -265,11 +267,13 @@ namespace LSystem
                 }
 
                 _aniModel.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
-                _aniModel1.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
+                //_aniModel1.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
 
 
-
-
+                if (camera is OrbitCamera)
+                {
+                    Renderer.RenderPoint(_shader, camera.Position, camera, new Vertex4f(1, 0, 0, 1), 0.01f);
+                }
             };
 
         }
@@ -344,7 +348,7 @@ namespace LSystem
             else if (e.KeyCode == Keys.F)
             {
                 IniFile.WritePrivateProfileString("PolygonMode", "PolygonMode", (int)_selectedAniModel.PolygonMode);
-                _selectedAniModel?.PopPolygonMode();
+                _selectedAniModel.PopPolygonMode();
             }
             else if (e.KeyCode == Keys.Space)
             {
@@ -627,22 +631,22 @@ namespace LSystem
 
         private void button13_Click(object sender, EventArgs e)
         {
-            _aniModel.Wear(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\jeogori.dae");
+            _aniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\jeogori.dae");
         }
 
         private void button14_Click(object sender, EventArgs e)
         {
-            _aniModel.Wear(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\nobiHairBand.dae");
+            _aniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\nobiHairBand.dae");
         }
 
         private void button15_Click(object sender, EventArgs e)
         {
-            _aniModel.Wear(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\pants.dae");
+            _aniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\pants.dae");
         }
 
         private void button16_Click(object sender, EventArgs e)
         {
-            _aniModel.Wear(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\gipshin.dae");
+            _aniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\gipshin.dae");
         }
 
         private void button17_Click(object sender, EventArgs e)
@@ -657,9 +661,77 @@ namespace LSystem
 
         private void button19_Click(object sender, EventArgs e)
         {
-            Entity eye = _aniModel.Transplant(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\eye.dae", "mixamorig_Head");
-            eye.PolygonMode = PolygonMode.Fill;
-            _entities.Add(eye);
+            _aniModel.Transplant(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\eye.dae", "mixamorig_Head");
+        }
+
+        private void button24_Click(object sender, EventArgs e)
+        {
+            Bone cBone = _aniModel.GetBoneByName("eyeRight");
+            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0, 0.1f, 0);
+        }
+
+        private void button25_Click(object sender, EventArgs e)
+        {
+            Bone cBone = _aniModel.GetBoneByName("eyeRight");
+            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0, -0.1f, 0);
+
+        }
+
+        private void button22_Click(object sender, EventArgs e)
+        {
+            Bone cBone = _aniModel.GetBoneByName("eyeRight");
+            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0.1f, 0, 0);
+        }
+
+        private void button23_Click(object sender, EventArgs e)
+        {
+            Bone cBone = _aniModel.GetBoneByName("eyeRight");
+            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(-0.1f, 0, 0);
+        }
+
+        private void button20_Click(object sender, EventArgs e)
+        {
+            Bone cBone = _aniModel.GetBoneByName("eyeRight");
+            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0, 0, 0.1f);
+        }
+
+        private void button21_Click(object sender, EventArgs e)
+        {
+            Bone cBone = _aniModel.GetBoneByName("eyeRight");
+            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0, 0, -0.1f);
+        }
+
+        private void button26_Click(object sender, EventArgs e)
+        {
+            Bone cBone = _aniModel.GetBoneByName("eyeRight");
+            Console.WriteLine(cBone.LocalBindTransform);
+        }
+
+        private void button27_Click(object sender, EventArgs e)
+        {
+            
+            Motion motion = _aniModel.CurrentMotion;
+            KeyFrame firstKeyFrame = motion.FirstKeyFrame;
+            KeyFrame lastKeyFrame = motion.LastKeyFrame;
+            KeyFrame middleKeyFrame = motion.MiddleKeyFrame;
+
+            Bone bone = _aniModel.GetBoneByName("eyeLeft");
+
+            float n = motion.Keyframes.Count;
+            float i = 0.0f;
+            foreach (KeyValuePair<float, KeyFrame> item in motion.Keyframes)
+            {
+                KeyFrame keyFrame = item.Value;
+                float t = i / n;
+                float rad = (float)(40.0f * Math.Sin(3.141502f *t) - 20);
+                keyFrame.AddBoneTransform("eyeLeft", new BonePose(bone.LocalBindTransform.Position, new Quaternion(Vertex3f.UnitY, rad)));
+                i += 1.0f;
+            }
+        }
+
+        private void button28_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

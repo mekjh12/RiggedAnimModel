@@ -112,7 +112,7 @@ namespace LSystem.Animate
 
                 // 로컬포즈행렬이 없으면 기본바인딩행렬로 가져온다.
                 Matrix4x4f boneLocalTransform = (currentPose.ContainsKey(bone.Name)) ?
-                    currentPose[bone.Name] : bone.LocalBindTransform; 
+                    currentPose[bone.Name] : bone.LocalBindTransform;
 
                 bone.LocalTransform = boneLocalTransform;
                 bone.AnimatedTransform = parentTransform * boneLocalTransform; // 행렬곱을 누적하기 위하여, 순서는 자식부터  v' = ... P2 P1 L v

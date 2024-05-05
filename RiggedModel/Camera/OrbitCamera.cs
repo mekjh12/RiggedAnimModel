@@ -6,7 +6,7 @@ namespace LSystem
     public class OrbitCamera : Camera
     {
         private float _distance = 1.0f;
-        private const float MIN_FARAWAY_DISTANCE = 1.0f;
+        private const float MIN_FARAWAY_DISTANCE = 0.1f;
 
         public float Distance
         {
