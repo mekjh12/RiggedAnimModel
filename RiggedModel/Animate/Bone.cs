@@ -40,6 +40,23 @@ namespace LSystem.Animate
 
         public bool IsLeaf => _children.Count == 0;
 
+
+        public void ApplyFrameMatrix(Vertex3f position, Vertex3f lookAt, Vertex3f up)
+        {
+            Vertex3f eyePos = _animatedTransform.Position + position;
+            float sx = _animatedTransform.Column0.Vertex3f().Norm();
+            float sy = _animatedTransform.Column1.Vertex3f().Norm();
+            float sz = _animatedTransform.Column2.Vertex3f().Norm();
+
+            Vertex3f z = (lookAt - eyePos).Normalized * sz;
+            Vertex3f x = Vertex3f.UnitZ.Cross(z).Normalized * sx;
+            Vertex3f y = z.Cross(x).Normalized * sy;
+            Matrix3x3f frame = Extension.Frame(x, y, z);
+            Vertex3f pos = _animatedTransform.Position;
+            _animatedTransform = frame.ToMat4x4f(pos);
+            UpdateLocalTransform();
+        }
+
         /// <summary>
         /// 현재 뼈에 캐릭터 공간 회전행렬을 적용하여 부모뻐로부터의 뒤틀림(twist) 회전각을 가져온다.
         /// </summary>

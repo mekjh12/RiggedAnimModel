@@ -17,6 +17,9 @@ namespace LSystem.Animate
         Transform _transform;
         string _name;
 
+        Action _updateAfter;
+
+
         public string Name => _name;
 
         public Transform Transform => _transform;
@@ -63,6 +66,15 @@ namespace LSystem.Animate
         {
             _renderingMode++;
             if (_renderingMode == RenderingMode.Count - 1) _renderingMode = 0;
+        }
+
+        public void LootAtEye(Vertex3f worldPosition)
+        {
+            _updateAfter = () =>
+            {
+                GetBoneByName("eyeLeft")?.ApplyFrameMatrix(_transform.Matrix4x4f.Position, worldPosition, Vertex3f.UnitZ);
+                GetBoneByName("eyeRight")?.ApplyFrameMatrix(_transform.Matrix4x4f.Position, worldPosition, Vertex3f.UnitZ);
+            };
         }
 
         /// <summary>
@@ -134,6 +146,11 @@ namespace LSystem.Animate
         public void Update(int deltaTime)
         {
             _animator.Update(0.001f * deltaTime);
+
+            if (_updateAfter != null) 
+            {
+                _updateAfter();
+            }
         }
 
         public void Render(Camera camera, StaticShader staticShader, AnimateShader ashader, BoneWeightShader boneWeightShader, bool isSkinVisible, bool isBoneVisible)
@@ -205,16 +222,7 @@ namespace LSystem.Animate
                     }
                 }
 
-                if (_point != null)
-                {
-                    for (int i = 0; i < _point.Length; i++)
-                    {
-                        Vertex3f transPoint = (entityModel * _point[i].Position.Vertex4f()).Vertex3f();
-                        Renderer.RenderPoint(_shader, transPoint, camera, _point[i].Color4, _point[i].Size);
-                    }
-
-                    //Renderer.RenderPoint(_shader, _ikPoint, camera, color: new Vertex4f(1, 1, 0, 1), size: 0.02f);
-                }
+                
                 */
             }
         }
@@ -305,12 +313,16 @@ namespace LSystem.Animate
             string name = Path.GetFileNameWithoutExtension(fileName);
 
             string boneName = name + "Left";
-            Bone LEyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName, Matrix4x4f.Translated(4.799998f, 11.8f, 11.70002f), Matrix4x4f.Translated(4.799998f, 11.8f, 11.70002f));
+            Bone LEyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName,
+                Matrix4x4f.Translated(4.0f, 11.8f, 11.70002f), 
+                Matrix4x4f.Translated(4.0f, 11.8f, 11.70002f));
             Entity EntityL = new Entity(boneName, _xmlDae.LoadFileOnly(fileName, LEyeBone.Index)[0]);
             AddEntity(boneName, EntityL);
 
             boneName = name + "Right";
-            Bone REyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName, Matrix4x4f.Translated(-4.799998f, 11.8f, 11.70002f), Matrix4x4f.Translated(-4.799998f, 11.8f, 11.70002f));
+            Bone REyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName, 
+                Matrix4x4f.Translated(-4.0f, 11.8f, 11.70002f), 
+                Matrix4x4f.Translated(-4.0f, 11.8f, 11.70002f));
             Entity EntityR = new Entity(boneName, _xmlDae.LoadFileOnly(fileName, REyeBone.Index, mirror: 0b_100)[0]);
             AddEntity(boneName, EntityR);
         }

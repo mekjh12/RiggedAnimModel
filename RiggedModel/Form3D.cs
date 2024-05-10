@@ -26,7 +26,7 @@ namespace LSystem
         bool _isShifted = false;
         bool _isIkApply = false;
 
-        ColorPoint[] _point;
+        List<ColorPoint> _point;
         Vertex3f _ikPoint = new Vertex3f(0.6f, 0.0f, 1.8f);
         Vertex3f _centerPoint = new Vertex3f(0.0f, 0.0f, 0.0f);
         float _theta = 0.0f;
@@ -197,9 +197,11 @@ namespace LSystem
                     _gameLoop.Camera.Init(w, h);
                 }
 
+                _point = new List<ColorPoint>();
+
                 _aniModel.Update(deltaTime);
                 //_aniModel1.Update(deltaTime);
-
+                
 
                 if (_isIkApply)
                 {
@@ -212,17 +214,15 @@ namespace LSystem
                             _ikPoint = new Vertex3f(_ikPoint.x, (float)(_ikPoint.y + 0.000f * Math.Cos(_theta)), 
                                 (float)(_ikPoint.z + 0.000f * Math.Sin(_theta)));
 
-                            Form3D._rot++;
+                            //Form3D._rot++;
                         }
 
-                        Vertex3f ikpoint = (_aniModel.GetEntity("main").ModelMatrix.Inverse * _ikPoint.Vertex4f()).Vertex3f();
+                        Vertex3f ikpoint = _aniModel.GetEntity("main").ModelMatrix.Inverse.Multipy(_ikPoint);
 
-                        _point = Kinetics.IKSolvedByFABRIK(target: ikpoint, boneEnd, 
+                        _point.AddRange(Kinetics.IKSolvedByFABRIK(target: ikpoint, boneEnd, 
                             chainLength: (int)this.nmChainLength.Value,
-                            iternations: (int)this.nmIternation.Value);
+                            iternations: (int)this.nmIternation.Value));
 
-                        //_aniModel.RootBone.UpdateChildBone(false);
-                        //Kinetics.BoneRotate(boneEnd, 1);
                     }
                 }
 
@@ -273,6 +273,13 @@ namespace LSystem
                 if (camera is OrbitCamera)
                 {
                     Renderer.RenderPoint(_shader, camera.Position, camera, new Vertex4f(1, 0, 0, 1), 0.01f);
+                }
+
+                for (int i = 0; i < _point.Count; i++)
+                {
+                    ColorPoint colorPoint = _point[i];
+                    Vertex3f pos = _aniModel.Transform.Matrix4x4f.Multipy(colorPoint.Position);
+                    Renderer.RenderPoint(_shader, pos, camera, colorPoint.Color4, colorPoint.Size);
                 }
             };
 
@@ -398,33 +405,7 @@ namespace LSystem
                 _selectedAniModel = (_selectedAniModel == _aniModel) ? _aniModel1 : _aniModel;
                 Console.WriteLine(_selectedAniModel.Name);
             }
-            else if (e.KeyCode == Keys.D3)
-            {
-                Bone bone = _aniModel.GetBoneByName("mixamorig_LeftHand_end");
-                Vertex3f G = _ikPoint;
-
-                // 말단뼈로부터 최상위 뼈까지 리스트를 만들고 Chain Length를 구함.
-                List<Bone> bones = new List<Bone>();
-                Bone parent = bone;
-                bones.Add(parent);
-                while (parent.Parent != null)
-                {
-                    bones.Add(parent.Parent);
-                    parent = parent.Parent;
-                }
-
-                // 가능한 Chain Length
-                int rootChainLength = bones.Count;
-                int N = Math.Min(3, rootChainLength);
-
-                // 뼈의 리스트 (말단의 뼈로부터 최상위 뼈로의 순서로)
-                // 0번째가 말단뼈 --> ... --> N-1이 최상위 뼈
-                // [초기값 설정] 캐릭터 공간 행렬과 뼈 공간 행렬을 만듦 
-                Bone[] Bn = new Bone[N];
-                for (int i = 0; i < N; i++) Bn[i] = bones[i];
-
-                
-            }
+            
 
             //
         }
@@ -437,8 +418,8 @@ namespace LSystem
         private void glControl1_MouseDoubleClick(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             Camera camera = _gameLoop.Camera;
-            Bone bone = _aniModel.GetBoneByName(this.cbBone.Text);
-            camera.GoTo(bone.AnimatedTransform.Position);
+            Bone bone = _aniModel.GetBoneByName("eyeLeft");
+            camera.GoTo(bone.AnimatedTransform.Position + _aniModel.Transform.Matrix4x4f.Position);
             if (camera is OrbitCamera) (camera as OrbitCamera).Distance = 1.0f;
         }
 
@@ -449,6 +430,8 @@ namespace LSystem
             {
                 Camera camera = _gameLoop.Camera;
                 _ikPoint = Picker3d.PickUpPoint(camera, e.X, e.Y, glControl1.Width, glControl1.Height);
+                _aniModel.LootAtEye(_ikPoint);
+
                 this.lbPrint.Text = _ikPoint.ToString();
                 IniFile.WritePrivateProfileString("PickupPoint", "x", _ikPoint.x);
                 IniFile.WritePrivateProfileString("PickupPoint", "y", _ikPoint.y);
@@ -708,25 +691,19 @@ namespace LSystem
         }
 
         private void button27_Click(object sender, EventArgs e)
-        {
-            
+        {            
             Motion motion = _aniModel.CurrentMotion;
-            KeyFrame firstKeyFrame = motion.FirstKeyFrame;
-            KeyFrame lastKeyFrame = motion.LastKeyFrame;
-            KeyFrame middleKeyFrame = motion.MiddleKeyFrame;
+            Vertex3f pos = _aniModel.GetBoneByName("eyeLeft").LocalBindTransform.Position;
+            motion.AddKeyActionByBone("eyeLeft", motion.FirstKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, -20));
+            motion.AddKeyActionByBone("eyeLeft", motion.MiddleKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, 20));
+            motion.AddKeyActionByBone( "eyeLeft", motion.LastKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, -20));
+            motion.InterpolateEmptyFrame("eyeLeft");
 
-            Bone bone = _aniModel.GetBoneByName("eyeLeft");
-
-            float n = motion.Keyframes.Count;
-            float i = 0.0f;
-            foreach (KeyValuePair<float, KeyFrame> item in motion.Keyframes)
-            {
-                KeyFrame keyFrame = item.Value;
-                float t = i / n;
-                float rad = (float)(40.0f * Math.Sin(3.141502f *t) - 20);
-                keyFrame.AddBoneTransform("eyeLeft", new BonePose(bone.LocalBindTransform.Position, new Quaternion(Vertex3f.UnitY, rad)));
-                i += 1.0f;
-            }
+            pos = _aniModel.GetBoneByName("eyeRight").LocalBindTransform.Position;
+            motion.AddKeyActionByBone("eyeRight", motion.FirstKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, -20));
+            motion.AddKeyActionByBone("eyeRight", motion.MiddleKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, 20));
+            motion.AddKeyActionByBone("eyeRight", motion.LastKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, -20));
+            motion.InterpolateEmptyFrame("eyeRight");
         }
 
         private void button28_Click(object sender, EventArgs e)

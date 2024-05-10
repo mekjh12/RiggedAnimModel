@@ -7,6 +7,8 @@ namespace LSystem.Animate
         private ArmaturePose _pose;
         private float _timeStamp;
 
+        public bool ContainsKey(string boneName) => _pose.ContainsKey(boneName);
+
         public KeyFrame(float timeStamp)
         {
             _timeStamp = timeStamp;

@@ -37,7 +37,10 @@ namespace LSystem.Animate
 
         public List<Vertex4f> BoneWeights => _boneWeights;
 
-        public Bone GetBoneByName(string boneName) => _dicBones[boneName];
+        public Bone GetBoneByName(string boneName)
+        {
+            return _dicBones.ContainsKey(boneName) ? _dicBones[boneName] : null;
+        }
 
         public Dictionary<string, Bone> DicBones => _dicBones;
 

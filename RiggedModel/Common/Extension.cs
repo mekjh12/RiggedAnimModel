@@ -48,6 +48,20 @@ namespace LSystem
             return new Vertex4f(a.x, a.y, a.z, 1.0f);
         }
 
+        public static Quaternion RotateQuaternionBetween(this Vertex3f a, Vertex3f b)
+        {
+            // 월드공간의 좌표로 변환을 해야 함.
+            float af = a.Norm();
+            float bf = b.Norm();
+            if (af == 0 || bf == 0) return Quaternion.Identity;
+
+            Vertex3f R = a.Cross(b).Normalized;
+            float cf = (a - b).Norm();
+            float cos = (af * af + bf * bf - cf * cf) / (2 * af * bf);
+            float theta = (-1 <= cos && cos <= 1) ? ((float)Math.Acos(cos)).ToDegree() : 0.0f;
+            return new Quaternion(R, theta);
+        }
+
         public static Matrix4x4f RotateBetween(this Vertex3f a, Vertex3f b)
         {
             // 월드공간의 좌표로 변환을 해야 함.
@@ -182,6 +196,39 @@ namespace LSystem
             return (mat * p.Vertex4f()).Vertex3f();
         }
 
+        public static Matrix4x4f ToMat4x4f(this Matrix3x3f mat, Vertex3f transpose)
+        {
+            Matrix4x4f m = Matrix4x4f.Identity;
+            m[0, 0] = mat[0, 0];
+            m[0, 1] = mat[0, 1];
+            m[0, 2] = mat[0, 2];
+            m[1, 0] = mat[1, 0];
+            m[1, 1] = mat[1, 1];
+            m[1, 2] = mat[1, 2];
+            m[2, 0] = mat[2, 0];
+            m[2, 1] = mat[2, 1];
+            m[2, 2] = mat[2, 2];
+            m[3, 0] = transpose.x;
+            m[3, 1] = transpose.y;
+            m[3, 2] = transpose.z;
+            return m;
+        }
+
+        public static Matrix3x3f Frame(Vertex3f x, Vertex3f y, Vertex3f z)
+        {
+            Matrix3x3f m = Matrix3x3f.Identity;
+            m[0, 0] = x.x;
+            m[0, 1] = x.y;
+            m[0, 2] = x.z;
+            m[1, 0] = y.x;
+            m[1, 1] = y.y;
+            m[1, 2] = y.z;
+            m[2, 0] = z.x;
+            m[2, 1] = z.y;
+            m[2, 2] = z.z;
+            return m;
+        }
+
         /// <summary>
         /// 4x4행렬에서 3x3행렬의 회전행렬만 가져온다.
         /// </summary>
@@ -201,6 +248,22 @@ namespace LSystem
             m[2, 2] = mat[2, 2];
             return m;
         }
+
+        public static Quaternion QuaternionFromFrame(this Vertex3f z, Vertex3f x, Vertex3f y)
+        {
+            Matrix4x4f m = Matrix4x4f.Identity;
+            m[0, 0] = x.x;
+            m[0, 1] = x.y;
+            m[0, 2] = x.z;
+            m[1, 0] = y.x;
+            m[1, 1] = y.y;
+            m[1, 2] = y.z;
+            m[2, 0] = z.x;
+            m[2, 1] = z.y;
+            m[2, 2] = z.z;
+            return m.ToQuaternion();
+        }
+
 
         public static Matrix4x4f CreateViewMatrix(Vertex3f pos, Vertex3f right, Vertex3f up, Vertex3f forward)
         {

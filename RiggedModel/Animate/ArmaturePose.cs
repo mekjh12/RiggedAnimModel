@@ -16,6 +16,8 @@ namespace LSystem.Animate
     {
         Dictionary<string, BonePose> _pose;
 
+        public bool ContainsKey(string name) => _pose.ContainsKey(name);
+
         public ArmaturePose()
         {
             _pose = new Dictionary<string, BonePose>();

@@ -60,6 +60,15 @@ namespace LSystem.Animate
             //bone.UpdateChildBone(isSelfIncluded: true);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="target">캐릭터공간에서의 타겟점을 설정해야 한다.</param>
+        /// <param name="bone"></param>
+        /// <param name="chainLength"></param>
+        /// <param name="iternations"></param>
+        /// <param name="epsilon"></param>
+        /// <returns></returns>
         public static ColorPoint[] IKSolvedByFABRIK(Vertex3f target, Bone bone, int chainLength = 2, int iternations = 50, float epsilon = 0.001f)
         {
             // 말단뼈로부터 최상위 뼈까지 리스트를 만들고 가능한 Chain Length를 구함.
