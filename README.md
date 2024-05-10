@@ -46,4 +46,9 @@ graph TD;
 ![image](https://github.com/mekjh12/RiggedModel/assets/122244587/28e7875f-29a4-4bc0-974b-9edbbb6e68bd)
 
 
+### Eye Targeting
+![image](https://github.com/mekjh12/RiggedAnimModel/assets/122244587/4b810b41-6c91-4244-a7f5-8af5f3d964af)
+
+
+
 
