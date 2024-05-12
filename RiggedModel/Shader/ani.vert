@@ -1,7 +1,7 @@
 ﻿#version 420 core
 
 const int MAX_JOINTS = 128;
-const int MAX_WEIGHTS = 3;
+const int MAX_WEIGHTS = 4;
 
 layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec2 in_textureCoords;
@@ -18,22 +18,37 @@ uniform mat4 proj;
 uniform mat4 view;
 uniform mat4 model;
 
+uniform bool isOnlyOneJointWeight;
+uniform int jointIndex;
+
 void main(void)
 {	
 	vec4 totalLocalPos = vec4(0.0);
 	vec4 totalNormal = vec4(0.0);
 	
-	for (int i=0; i<MAX_WEIGHTS; i++)
+	if (isOnlyOneJointWeight)
 	{
-		int index = int(in_jointIndices[i]);
-		//if (index == 0) continue;
-		mat4 jointTransform = jointTransforms[index];
-
+		mat4 jointTransform = jointTransforms[jointIndex];
 		vec4 posePosition = jointTransform * vec4(in_position, 1.0);
-		totalLocalPos += posePosition * in_weights[i];
-		
+		totalLocalPos += posePosition;
+
 		vec4 worldNormal = jointTransform * vec4(in_normal, 0.0);
-		totalNormal += worldNormal * in_weights[i];
+		totalNormal += worldNormal;
+	}
+	else
+	{
+		for (int i=0; i<MAX_WEIGHTS; i++)
+		{
+			int index = int(in_jointIndices[i]);
+			//if (index == 0) continue;
+			mat4 jointTransform = jointTransforms[index];
+
+			vec4 posePosition = jointTransform * vec4(in_position, 1.0);
+			totalLocalPos += posePosition * in_weights[i];
+		
+			vec4 worldNormal = jointTransform * vec4(in_normal, 0.0);
+			totalNormal += worldNormal * in_weights[i];
+		}
 	}
 
 	gl_Position = proj * view * model * totalLocalPos;

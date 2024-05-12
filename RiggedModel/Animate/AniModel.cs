@@ -1,24 +1,22 @@
-﻿using Assimp;
-using OpenGL;
+﻿using OpenGL;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Xml.Linq;
 
 namespace LSystem.Animate
 {
     class AniModel
     {
+        protected string _name;
+        protected XmlDae _xmlDae;
+
+        protected Action _updateBefore;
+        protected Action _updateAfter;
+        protected Transform _transform;
+
         Dictionary<string, Entity> _models;
         Bone _rootBone;
         Animator _animator;
-        XmlDae _xmlDae;
-        Transform _transform;
-        string _name;
-
-        Action _updateAfter;
-
 
         public string Name => _name;
 
@@ -68,15 +66,6 @@ namespace LSystem.Animate
             if (_renderingMode == RenderingMode.Count - 1) _renderingMode = 0;
         }
 
-        public void LootAtEye(Vertex3f worldPosition)
-        {
-            _updateAfter = () =>
-            {
-                GetBoneByName("eyeLeft")?.ApplyFrameMatrix(_transform.Matrix4x4f.Position, worldPosition, Vertex3f.UnitZ);
-                GetBoneByName("eyeRight")?.ApplyFrameMatrix(_transform.Matrix4x4f.Position, worldPosition, Vertex3f.UnitZ);
-            };
-        }
-
         /// <summary>
         /// 본이름으로부터 본을 가져온다.
         /// </summary>
@@ -116,7 +105,6 @@ namespace LSystem.Animate
 
             _xmlDae = xmlDae;
             _rootBone = xmlDae.RootBone;
-            //_boneCount = xmlDae.BoneCount;
             _animator = new Animator(this);
             _transform = new Transform();
         }
@@ -145,6 +133,11 @@ namespace LSystem.Animate
         /// <param name="deltaTime"></param>
         public void Update(int deltaTime)
         {
+            if (_updateBefore != null)
+            {
+                _updateBefore();
+            }
+
             _animator.Update(0.001f * deltaTime);
 
             if (_updateAfter != null) 
@@ -153,7 +146,8 @@ namespace LSystem.Animate
             }
         }
 
-        public void Render(Camera camera, StaticShader staticShader, AnimateShader ashader, BoneWeightShader boneWeightShader, bool isSkinVisible, bool isBoneVisible)
+        public void Render(Camera camera, StaticShader staticShader, AnimateShader ashader, BoneWeightShader boneWeightShader,
+            bool isSkinVisible = true, bool isBoneVisible = false, bool isBoneParentCurrentVisible = false, string boneName = "")
         {
             Matrix4x4f[] jointMatrix = JointTransformMatrix;
 
@@ -192,6 +186,22 @@ namespace LSystem.Animate
                     }
                 }
 
+                // 부모와 현재 뼈대 렌더링
+                if (isBoneParentCurrentVisible)
+                {
+                    Bone cBone = GetBoneByName(boneName);
+                    Bone pBone = cBone.Parent;
+                    if (cBone != null)
+                    {
+                        Renderer.RenderLocalAxis(staticShader, camera, size: cBone.AnimatedTransform.Column3.Vertex3f().Norm() * _axisLength, 
+                            thick: _drawThick, _transform.Matrix4x4f * modelMatrix * cBone.AnimatedTransform);
+                    }
+                    if (pBone != null)
+                    {
+                        Renderer.RenderLocalAxis(staticShader, camera, size: pBone.AnimatedTransform.Column3.Vertex3f().Norm() * _axisLength, thick: _drawThick,
+                              _transform.Matrix4x4f * modelMatrix * pBone.AnimatedTransform);
+                    }
+                }
                 Renderer.RenderLocalAxis(staticShader, camera, size: 100.0f, thick: _drawThick, _rootBone.AnimatedTransform * _transform.Matrix4x4f);
 
                 /*
@@ -205,22 +215,8 @@ namespace LSystem.Animate
                     }
                 }
 
-                // 부모와 현재 뼈대 렌더링
-                if (this.ckBoneParentCurrentVisible.Checked) 
-                {
-                    Bone cBone = GetBoneByName(this.cbBone.Text);
-                    Bone pBone = cBone.Parent;
-                    if (cBone != null)
-                    {
-                        Renderer.RenderLocalAxis(_shader, camera, size: cBone.AnimatedTransform.Column3.Vertex3f().Norm() * _axisLength, thick: _drawThick,
-                             entityModel * cBone.AnimatedTransform);
-                    }
-                    if (pBone != null)
-                    {
-                        Renderer.RenderLocalAxis(_shader, camera, size: pBone.AnimatedTransform.Column3.Vertex3f().Norm() * _axisLength, thick: _drawThick,
-                             entityModel * pBone.AnimatedTransform);
-                    }
-                }
+                
+                
 
                 
                 */
@@ -286,7 +282,7 @@ namespace LSystem.Animate
             }
         }
 
-        private void AddEntity(string name, Entity entity)
+        protected void AddEntity(string name, Entity entity)
         {
             if (_models.ContainsKey(name))
             {
@@ -299,6 +295,20 @@ namespace LSystem.Animate
             }
         }
 
+        protected void Remove(string name)
+        {
+            if (_models.ContainsKey(name))
+            {
+                _models.Remove(name);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="expandValue"></param>
+        /// <returns></returns>
         public Entity Attach(string fileName, float expandValue = 0.01f)
         {
             string name = Path.GetFileNameWithoutExtension(fileName);
@@ -306,25 +316,6 @@ namespace LSystem.Animate
             Entity clothEntity = new Entity("aniModel_" + name, texturedModels[0]);
             AddEntity(name, clothEntity);
             return clothEntity;
-        }
-
-        public void Transplant(string fileName, string parentBoneName)
-        {
-            string name = Path.GetFileNameWithoutExtension(fileName);
-
-            string boneName = name + "Left";
-            Bone LEyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName,
-                Matrix4x4f.Translated(4.0f, 11.8f, 11.70002f), 
-                Matrix4x4f.Translated(4.0f, 11.8f, 11.70002f));
-            Entity EntityL = new Entity(boneName, _xmlDae.LoadFileOnly(fileName, LEyeBone.Index)[0]);
-            AddEntity(boneName, EntityL);
-
-            boneName = name + "Right";
-            Bone REyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName, 
-                Matrix4x4f.Translated(-4.0f, 11.8f, 11.70002f), 
-                Matrix4x4f.Translated(-4.0f, 11.8f, 11.70002f));
-            Entity EntityR = new Entity(boneName, _xmlDae.LoadFileOnly(fileName, REyeBone.Index, mirror: 0b_100)[0]);
-            AddEntity(boneName, EntityR);
         }
 
     }

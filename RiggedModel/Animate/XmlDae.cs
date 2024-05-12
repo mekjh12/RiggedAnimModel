@@ -86,6 +86,7 @@ namespace LSystem.Animate
         {
             XmlDocument xml = new XmlDocument();
             xml.Load(fileName);
+            _filename = fileName;
 
             // (1) library_images = textures
             Dictionary<string, Texture> textures = LibraryImages(xml);
@@ -165,7 +166,7 @@ namespace LSystem.Animate
             return motionName;
         }
 
-        public Bone AddBone(string boneName, int boneIndex, string parentBoneName, Matrix4x4f localPivotBindTransform, 
+        public Bone AddBone(string boneName, int boneIndex, string parentBoneName, Matrix4x4f inverseBindTransform, 
             Matrix4x4f localBindTransform)
         {
             Bone parentBone = GetBoneByName(parentBoneName);
@@ -173,10 +174,10 @@ namespace LSystem.Animate
             parentBone.AddChild(cBone);
             cBone.Parent = parentBone;
             cBone.LocalBindTransform = localBindTransform;
-            Matrix4x4f m = parentBone.AnimatedBindTransform * localPivotBindTransform;
-            cBone.InverseBindTransform = (m * 1000.0f).Inverse * 1000.0f;
+            cBone.InverseBindTransform = inverseBindTransform;
             _dicBones.Add(boneName, cBone);
 
+            // 배열이므로 boneNames 리스트를 다시 선언하여 저장한다.
             List<string> boneNameList = new List<string>();
             for (int i = 0; i < _boneNames.Length; i++) boneNameList.Add(_boneNames[i]);
             boneNameList.Add(boneName);
@@ -185,10 +186,11 @@ namespace LSystem.Animate
             return cBone;
         }
 
-        public List<TexturedModel> LoadFileOnly(string filename, int boneIndex, byte mirror = 0)
+        public TexturedModel LoadFileOnly(string filename)
         {
             XmlDocument xml = new XmlDocument();
             xml.Load(filename);
+            _filename = filename;
 
             // (1) library_images = textures
             Dictionary<string, Texture> textures = LibraryImages(xml);
@@ -197,32 +199,6 @@ namespace LSystem.Animate
 
             // (2) library_geometries = position, normal, texcoord, color
             List<MeshTriangles> meshes = LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
-
-            // (3) library_controllers = boneNames, InvBindPoses, boneIndex, boneWeight
-            // invBindPoses는 계산할 수 있으므로 생략가능하다.
-            LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
-                    out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight, out Matrix4x4f bindShapeMatrix);
-
-            // (5) library_visual_scenes = bone hierarchy + rootBone
-            //Bone rootBone = LibraryVisualScenes(xml, invBindPoses);
-
-            // (6) source positions으로부터 
-            Matrix4x4f A0 = _rootBone.LocalBindTransform;
-            Matrix4x4f A0xS = A0 * bindShapeMatrix;
-            for (int i = 0; i < lstPositions.Count; i++)
-            {
-                lstPositions[i] = A0xS.Multipy(lstPositions[i]);
-
-                // mirror처리
-                float px = lstPositions[i].x;
-                float py = lstPositions[i].y;
-                float pz = lstPositions[i].z;
-
-                if (mirror >> 2 == 1) // x mirror
-                    lstPositions[i] = new Vertex3f(-px, py, pz);
-
-            }
-
 
             // 읽어온 정보의 인덱스를 이용하여 GPU에 데이터를 전송한다.
             List<TexturedModel> texturedModels = new List<TexturedModel>();
@@ -243,15 +219,6 @@ namespace LSystem.Animate
 
                     texcoords[2 * i + 0] = lstTexCoord[tidx].x;
                     texcoords[2 * i + 1] = lstTexCoord[tidx].y;
-
-                    boneIndices[4 * i + 0] = (uint)boneIndex;
-                    boneIndices[4 * i + 1] = 0;
-                    boneIndices[4 * i + 2] = 0;
-                    boneIndices[4 * i + 3] = 0;
-                    boneWeights[4 * i + 0] = 1.0f;
-                    boneWeights[4 * i + 1] = 0.0f;
-                    boneWeights[4 * i + 2] = 0.0f;
-                    boneWeights[4 * i + 3] = 0.0f;
                 }
 
                 // 로딩한 postions, boneIndices, boneWeights를 버텍스로
@@ -271,30 +238,38 @@ namespace LSystem.Animate
                 Gl.BindVertexArray(vao);
                 GpuLoader.StoreDataInAttributeList(0, 3, postions, BufferUsage.StaticDraw);
                 GpuLoader.StoreDataInAttributeList(1, 2, texcoords, BufferUsage.StaticDraw);
-                GpuLoader.StoreDataInAttributeList(3, 4, boneIndices, BufferUsage.StaticDraw);
-                GpuLoader.StoreDataInAttributeList(4, 4, boneWeights, BufferUsage.StaticDraw);
                 //GpuLoader.BindIndicesBuffer(lstVertexIndices.ToArray());
                 Gl.BindVertexArray(0);
                 _rawModel = new RawModel3d(vao, postions);
 
-                string effect = materialToEffect[meshTriangles.Material].Replace("#", "");
-                string imageName = (effectToImage[effect]);
-
-                if (textures.ContainsKey(imageName))
+                if (meshTriangles.Material == "")
                 {
-                    TexturedModel texturedModel = new TexturedModel(_rawModel, textures[imageName]);
+                    TexturedModel texturedModel = new TexturedModel(_rawModel, null);
                     texturedModel.IsDrawElement = false;
                     texturedModels.Add(texturedModel);
                 }
+                else
+                {
+                    string effect = materialToEffect[meshTriangles.Material].Replace("#", "");
+                    string imageName = (effectToImage[effect]);
+
+                    if (textures.ContainsKey(imageName))
+                    {
+                        TexturedModel texturedModel = new TexturedModel(_rawModel, textures[imageName]);
+                        texturedModel.IsDrawElement = false;
+                        texturedModels.Add(texturedModel);
+                    }
+                }
             }
 
-            return texturedModels;
+            return texturedModels[0];
         }
 
         public List<TexturedModel> LoadFile(string filename)
         {
             XmlDocument xml = new XmlDocument();
             xml.Load(filename);
+            _filename = filename;
 
             // (1) library_images = textures
             Dictionary<string, Texture> textures = LibraryImages(xml);
@@ -604,7 +579,7 @@ namespace LSystem.Animate
                             //if (colorOffset >= 0) colorIndices.Add(uint.Parse(values[i + colorOffset]));
                         }
 
-                        string materialName = node.Attributes["material"].Value;
+                        string materialName = node.Attributes["material"] != null ? node.Attributes["material"].Value : "";
 
                         MeshTriangles tri = new MeshTriangles();
                         tri.Material = materialName;

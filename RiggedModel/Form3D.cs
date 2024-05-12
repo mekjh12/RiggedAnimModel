@@ -17,8 +17,7 @@ namespace LSystem
         AnimateShader _ashader;
         BoneWeightShader _bwShader;
 
-        AniModel _aniModel;
-        AniModel _aniModel1;
+        HumanAniModel _humanAniModel;
         AniModel _selectedAniModel;
         XmlDae xmlDae;
 
@@ -30,6 +29,8 @@ namespace LSystem
         Vertex3f _ikPoint = new Vertex3f(0.6f, 0.0f, 1.8f);
         Vertex3f _centerPoint = new Vertex3f(0.0f, 0.0f, 0.0f);
         float _theta = 0.0f;
+
+        Vertex3f _bgColor = new Vertex3f(0.1f, 0.1f, 0.1f);
 
         CTrackBar trFov;
         CTrackBar trAxisLength;
@@ -97,17 +98,11 @@ namespace LSystem
             {
                 xmlDae = new XmlDae(EngineLoop.PROJECT_PATH + $"\\Res\\{cbCharacter.Items[0]}", isLoadAnimation: false);
                 xmlDae.AddAction(EngineLoop.PROJECT_PATH + "\\Res\\Action\\Interpolation Pose.dae");
+
                 Entity daeEntity = new Entity("aniModel", xmlDae.Models.ToArray());
-
-                _aniModel = new AniModel("main1", daeEntity, xmlDae);
-                _aniModel.SetMotion(xmlDae.DefaultMotion.Name);
-
-                Entity daeEntity1 = new Entity("aniModel1", xmlDae.Models.ToArray());
-                daeEntity1.Position = new Vertex3f(1, 2, 0);
-                _aniModel1 = new AniModel("main2", daeEntity1, xmlDae);
-                _aniModel1.SetMotion(xmlDae.DefaultMotion.Name);
-
-                _selectedAniModel = _aniModel;
+                _humanAniModel = new HumanAniModel("main1", daeEntity, xmlDae);
+                _humanAniModel.SetMotion(xmlDae.DefaultMotion.Name);
+                _selectedAniModel = _humanAniModel;
                 //this.cbCharacter.Text = "heroNasty.dae"; // xmlDae.DefaultMotion.Name;
                 //this.cbAction.Text = (string)this.cbAction.Items[0];
             }
@@ -199,25 +194,21 @@ namespace LSystem
 
                 _point = new List<ColorPoint>();
 
-                _aniModel.Update(deltaTime);
+                _humanAniModel.Update(deltaTime);
                 //_aniModel1.Update(deltaTime);
                 
-
                 if (_isIkApply)
                 {
-                    Bone boneEnd = _aniModel.GetBoneByName(this.cbBone.Text);
+                    Bone boneEnd = _humanAniModel.GetBoneByName(this.cbBone.Text);
                     if (boneEnd != null)
                     {
-                        if (_aniModel.Animator.IsPlaying)
+                        if (_humanAniModel.Animator.IsPlaying)
                         {
                             _theta += 0.1f;
-                            _ikPoint = new Vertex3f(_ikPoint.x, (float)(_ikPoint.y + 0.000f * Math.Cos(_theta)), 
-                                (float)(_ikPoint.z + 0.000f * Math.Sin(_theta)));
-
                             //Form3D._rot++;
                         }
 
-                        Vertex3f ikpoint = _aniModel.GetEntity("main").ModelMatrix.Inverse.Multipy(_ikPoint);
+                        Vertex3f ikpoint = _humanAniModel.GetEntity("main").ModelMatrix.Inverse.Multipy(_ikPoint);
 
                         _point.AddRange(Kinetics.IKSolvedByFABRIK(target: ikpoint, boneEnd, 
                             chainLength: (int)this.nmChainLength.Value,
@@ -235,7 +226,7 @@ namespace LSystem
                 if (Keyboard.IsKeyDown(Key.D6)) entity.Pitch(-1);
 
                 OrbitCamera camera = _gameLoop.Camera as OrbitCamera;
-                this.lblTime.Text = "time=" + _aniModel.MotionTime.Round(3) + "/" + _aniModel.Animator.CurrentMotion.Length.Round(3);
+                this.lblTime.Text = "time=" + _humanAniModel.MotionTime.Round(3) + "/" + _humanAniModel.Animator.CurrentMotion.Length.Round(3);
                 this.Text = $"{FramePerSecond.FPS}fps, t={FramePerSecond.GlobalTick} p={camera.Position}, distance={camera.Distance}";
 
             };
@@ -250,7 +241,7 @@ namespace LSystem
                 Gl.Enable(EnableCap.CullFace);
                 Gl.CullFace(CullFaceMode.Back);
 
-                Gl.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                Gl.ClearColor(_bgColor.x, _bgColor.y, _bgColor.z, 1.0f);
                 Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 Gl.Enable(EnableCap.DepthTest);
 
@@ -266,9 +257,10 @@ namespace LSystem
                     Renderer.Render(_shader, entity, camera);
                 }
 
-                _aniModel.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
+                _humanAniModel.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked,
+                    isBoneParentCurrentVisible: this.ckBoneParentCurrentVisible.Checked, 
+                    boneName: this.cbBone.Text);
                 //_aniModel1.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
-
 
                 if (camera is OrbitCamera)
                 {
@@ -278,7 +270,7 @@ namespace LSystem
                 for (int i = 0; i < _point.Count; i++)
                 {
                     ColorPoint colorPoint = _point[i];
-                    Vertex3f pos = _aniModel.Transform.Matrix4x4f.Multipy(colorPoint.Position);
+                    Vertex3f pos = _humanAniModel.Transform.Matrix4x4f.Multipy(colorPoint.Position);
                     Renderer.RenderPoint(_shader, pos, camera, colorPoint.Color4, colorPoint.Size);
                 }
             };
@@ -373,7 +365,7 @@ namespace LSystem
             }
             else if (e.KeyCode == Keys.R)
             {
-                IniFile.WritePrivateProfileString("Rendering", "RenderingMode", (int)_aniModel.RenderMode);
+                IniFile.WritePrivateProfileString("Rendering", "RenderingMode", (int)_humanAniModel.RenderMode);
                 _selectedAniModel.PopRenderingMode();
             }
             else if (e.KeyCode == Keys.Z)
@@ -402,12 +394,8 @@ namespace LSystem
             }
             else if (e.KeyCode == Keys.D1)
             {
-                _selectedAniModel = (_selectedAniModel == _aniModel) ? _aniModel1 : _aniModel;
-                Console.WriteLine(_selectedAniModel.Name);
+                _selectedAniModel = _humanAniModel;
             }
-            
-
-            //
         }
 
         private void ckBoneVisible_CheckedChanged(object sender, EventArgs e)
@@ -418,9 +406,12 @@ namespace LSystem
         private void glControl1_MouseDoubleClick(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             Camera camera = _gameLoop.Camera;
-            Bone bone = _aniModel.GetBoneByName("eyeLeft");
-            camera.GoTo(bone.AnimatedTransform.Position + _aniModel.Transform.Matrix4x4f.Position);
-            if (camera is OrbitCamera) (camera as OrbitCamera).Distance = 1.0f;
+            Bone bone = _humanAniModel.GetBoneByName("mixamorig_eyeLeft");
+            if (bone != null)
+            {
+                camera.GoTo(bone.AnimatedTransform.Position + _humanAniModel.Transform.Matrix4x4f.Position);
+                if (camera is OrbitCamera) (camera as OrbitCamera).Distance = 1.0f;
+            }
         }
 
         private void glControl1_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -430,12 +421,8 @@ namespace LSystem
             {
                 Camera camera = _gameLoop.Camera;
                 _ikPoint = Picker3d.PickUpPoint(camera, e.X, e.Y, glControl1.Width, glControl1.Height);
-                _aniModel.LootAtEye(_ikPoint);
-
+                _humanAniModel.LootAtEye(_ikPoint);
                 this.lbPrint.Text = _ikPoint.ToString();
-                IniFile.WritePrivateProfileString("PickupPoint", "x", _ikPoint.x);
-                IniFile.WritePrivateProfileString("PickupPoint", "y", _ikPoint.y);
-                IniFile.WritePrivateProfileString("PickupPoint", "z", _ikPoint.z);
             }
         }
 
@@ -474,7 +461,7 @@ namespace LSystem
 
         private void cbAction_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _aniModel.SetMotion(cbAction.Text);
+            _humanAniModel.SetMotion(cbAction.Text);
         }
 
         private void ckBoneBindPose_CheckedChanged(object sender, EventArgs e)
@@ -496,11 +483,12 @@ namespace LSystem
 
             Entity daeEntity = new Entity("aniModel", xmlDae.Models.ToArray());
             daeEntity.Material = new Material();
-            daeEntity.Position = new Vertex3f(0, 0, 0);
             daeEntity.IsAxisVisible = true;
 
-            _aniModel = new AniModel("main", daeEntity, xmlDae);
-            _aniModel.SetMotion(xmlDae.DefaultMotion.Name);
+            _humanAniModel = new HumanAniModel("main", daeEntity, xmlDae);
+            _humanAniModel.Transform.SetPosition(new Vertex3f(0, 1, 0));
+            _humanAniModel.SetMotion(xmlDae.DefaultMotion.Name);
+            _selectedAniModel = _humanAniModel;
         }
 
         private void btnCharacterDelete_Click(object sender, EventArgs e)
@@ -519,14 +507,14 @@ namespace LSystem
 
         private void button3_Click(object sender, EventArgs e)
         {
-            _aniModel.GetBoneByName("mixamorig_LeftHand").RestrictAngle = new BoneAngle(-180, 180, -180, 180, -180, 180);
+            _humanAniModel.GetBoneByName("mixamorig_LeftHand").RestrictAngle = new BoneAngle(-180, 180, -180, 180, -180, 180);
         }
 
         private void button4_Click(object sender, EventArgs e)
         {
-            _aniModel.GetBoneByName("mixamorig_LeftHand").RestrictAngle = new BoneAngle(-45, 45, -30, 30, 0, 0);
-            _aniModel.GetBoneByName("mixamorig_LeftForeArm").RestrictAngle = new BoneAngle(-90, 90, 0, 0, 0, 0);
-            _aniModel.GetBoneByName("mixamorig_LeftArm").RestrictAngle = new BoneAngle(-90, 90, -90, 90, 0, 0);
+            _humanAniModel.GetBoneByName("mixamorig_LeftHand").RestrictAngle = new BoneAngle(-45, 45, -30, 30, 0, 0);
+            _humanAniModel.GetBoneByName("mixamorig_LeftForeArm").RestrictAngle = new BoneAngle(-90, 90, 0, 0, 0, 0);
+            _humanAniModel.GetBoneByName("mixamorig_LeftArm").RestrictAngle = new BoneAngle(-90, 90, -90, 90, 0, 0);
         }
 
         private void ckSkinVisible_CheckedChanged(object sender, EventArgs e)
@@ -614,101 +602,70 @@ namespace LSystem
 
         private void button13_Click(object sender, EventArgs e)
         {
-            _aniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\jeogori.dae");
+            _humanAniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\jeogori.dae");
         }
 
         private void button14_Click(object sender, EventArgs e)
         {
-            _aniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\nobiHairBand.dae");
+            _humanAniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\nobiHairBand.dae");
         }
 
         private void button15_Click(object sender, EventArgs e)
         {
-            _aniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\pants.dae");
+            _humanAniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\pants.dae");
         }
 
         private void button16_Click(object sender, EventArgs e)
         {
-            _aniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\gipshin.dae");
+            _humanAniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\gipshin.dae");
         }
 
         private void button17_Click(object sender, EventArgs e)
         {
-            _aniModel.Entities.Remove("pants");
+            _humanAniModel.Entities.Remove("pants");
         }
 
         private void button18_Click(object sender, EventArgs e)
         {
-            _aniModel.Entities.Remove("jeogori");
+            _humanAniModel.Entities.Remove("jeogori");
         }
 
-        private void button19_Click(object sender, EventArgs e)
+        private void button12_Click_1(object sender, EventArgs e)
         {
-            _aniModel.Transplant(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\eye.dae", "mixamorig_Head");
-        }
-
-        private void button24_Click(object sender, EventArgs e)
-        {
-            Bone cBone = _aniModel.GetBoneByName("eyeRight");
-            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0, 0.1f, 0);
-        }
-
-        private void button25_Click(object sender, EventArgs e)
-        {
-            Bone cBone = _aniModel.GetBoneByName("eyeRight");
-            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0, -0.1f, 0);
-
-        }
-
-        private void button22_Click(object sender, EventArgs e)
-        {
-            Bone cBone = _aniModel.GetBoneByName("eyeRight");
-            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0.1f, 0, 0);
-        }
-
-        private void button23_Click(object sender, EventArgs e)
-        {
-            Bone cBone = _aniModel.GetBoneByName("eyeRight");
-            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(-0.1f, 0, 0);
+            _humanAniModel.Entities.Remove("gipshin");
         }
 
         private void button20_Click(object sender, EventArgs e)
         {
-            Bone cBone = _aniModel.GetBoneByName("eyeRight");
-            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0, 0, 0.1f);
+            _humanAniModel.Entities.Remove("nobiHairBand");
+        }
+
+        private void button19_Click(object sender, EventArgs e)
+        {
+            string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\sword1.dae";
+            TexturedModel texturedModel = xmlDae.LoadFileOnly(fileName);
+            Entity entity1 = new Entity("mixamorig_LeftHand_Item1", texturedModel);
+            Entity entity2 = new Entity("mixamorig_LeftHand_Item2", texturedModel);
+            _humanAniModel.HandGrab(Mammal.Hand.LeftHand, entity1);
+            _humanAniModel.HandGrab(Mammal.Hand.RightHand, entity2);
+            _humanAniModel.FoldHand(Mammal.Hand.LeftHand);
+            _humanAniModel.FoldHand(Mammal.Hand.RightHand);
         }
 
         private void button21_Click(object sender, EventArgs e)
         {
-            Bone cBone = _aniModel.GetBoneByName("eyeRight");
-            cBone.LocalBindTransform = cBone.LocalBindTransform * Matrix4x4f.Translated(0, 0, -0.1f);
+            _humanAniModel.UnfoldHand(Mammal.Hand.LeftHand);
+            _humanAniModel.UnfoldHand(Mammal.Hand.RightHand);
+            _humanAniModel.RemoveHandGrab(Mammal.Hand.LeftHand);
+            _humanAniModel.RemoveHandGrab(Mammal.Hand.RightHand);
         }
 
-        private void button26_Click(object sender, EventArgs e)
+        private void button22_Click(object sender, EventArgs e)
         {
-            Bone cBone = _aniModel.GetBoneByName("eyeRight");
-            Console.WriteLine(cBone.LocalBindTransform);
-        }
-
-        private void button27_Click(object sender, EventArgs e)
-        {            
-            Motion motion = _aniModel.CurrentMotion;
-            Vertex3f pos = _aniModel.GetBoneByName("eyeLeft").LocalBindTransform.Position;
-            motion.AddKeyActionByBone("eyeLeft", motion.FirstKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, -20));
-            motion.AddKeyActionByBone("eyeLeft", motion.MiddleKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, 20));
-            motion.AddKeyActionByBone( "eyeLeft", motion.LastKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, -20));
-            motion.InterpolateEmptyFrame("eyeLeft");
-
-            pos = _aniModel.GetBoneByName("eyeRight").LocalBindTransform.Position;
-            motion.AddKeyActionByBone("eyeRight", motion.FirstKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, -20));
-            motion.AddKeyActionByBone("eyeRight", motion.MiddleKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, 20));
-            motion.AddKeyActionByBone("eyeRight", motion.LastKeyFrame.TimeStamp, pos, new Quaternion(Vertex3f.UnitY, -20));
-            motion.InterpolateEmptyFrame("eyeRight");
-        }
-
-        private void button28_Click(object sender, EventArgs e)
-        {
-
+            string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\soilder_cap.dae";
+            TexturedModel texturedModel = xmlDae.LoadFileOnly(fileName);
+            Entity entity1 = new Entity("mixamorig_Head_SoilderCap", texturedModel);
+            _humanAniModel.HandGrab(Mammal.Hand.Head, entity1);
         }
     }
 }

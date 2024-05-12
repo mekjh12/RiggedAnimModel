@@ -17,6 +17,21 @@ namespace LSystem
 
         Vertex3f _scale;
 
+        bool _isOnlyOneJointWeight = false;
+        int _boneIndexOnlyOneJoint;
+
+        public int BoneIndexOnlyOneJoint
+        {
+            get => _boneIndexOnlyOneJoint;
+            set => _boneIndexOnlyOneJoint = value;
+        }
+
+        public bool IsOnlyOneJointWeight
+        {
+            get => _isOnlyOneJointWeight;
+            set => _isOnlyOneJointWeight = value;
+        }
+
         public float DrawThick
         {
             get => _drawThick;
@@ -62,7 +77,7 @@ namespace LSystem
         {
             get 
             {
-                Matrix4x4f S = Extension.Scaled(_scale); 
+                Matrix4x4f S = Matrix4x4f.Identity.Scaled(_scale); 
                 Matrix4x4f R = _pose.Matrix4x4f;
                 Matrix4x4f T = Matrix4x4f.Translated(_pose.Postiton.x, _pose.Postiton.y, _pose.Postiton.z);
                 return T * R * S; // [순서 중요] 연산순서는 S->R->T순이다.

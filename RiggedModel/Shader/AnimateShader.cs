@@ -30,6 +30,7 @@ namespace LSystem
             UniformLocations("model", "view", "proj");
             UniformLocations("lightDirection");
             UniformLocations("diffuseMap");
+            UniformLocations("isOnlyOneJointWeight", "jointIndex");
 
             for (int i = 0; i < MAX_JOINTS; i++)
                 UniformLocation($"jointTransforms[{i}]");
@@ -61,5 +62,16 @@ namespace LSystem
         {
             base.LoadMatrix(_location["model"], matrix);
         }
+
+        public void LoadIsOnlyOneJointWeight(bool isOnlyOneJointWeight)
+        {
+            base.LoadBoolean(_location["isOnlyOneJointWeight"], isOnlyOneJointWeight);
+        }
+
+        public void LoadJointIndex(int jointIndex)
+        {
+            base.LoadInt(_location["jointIndex"], jointIndex);
+        }
+
     }
 }

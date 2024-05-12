@@ -56,23 +56,17 @@
             this.button10 = new System.Windows.Forms.Button();
             this.button11 = new System.Windows.Forms.Button();
             this.ckBoneParentCurrentVisible = new System.Windows.Forms.CheckBox();
-            this.button12 = new System.Windows.Forms.Button();
             this.button13 = new System.Windows.Forms.Button();
             this.button14 = new System.Windows.Forms.Button();
             this.button15 = new System.Windows.Forms.Button();
             this.button16 = new System.Windows.Forms.Button();
             this.button17 = new System.Windows.Forms.Button();
             this.button18 = new System.Windows.Forms.Button();
-            this.button19 = new System.Windows.Forms.Button();
+            this.button12 = new System.Windows.Forms.Button();
             this.button20 = new System.Windows.Forms.Button();
+            this.button19 = new System.Windows.Forms.Button();
             this.button21 = new System.Windows.Forms.Button();
             this.button22 = new System.Windows.Forms.Button();
-            this.button23 = new System.Windows.Forms.Button();
-            this.button24 = new System.Windows.Forms.Button();
-            this.button25 = new System.Windows.Forms.Button();
-            this.button26 = new System.Windows.Forms.Button();
-            this.button27 = new System.Windows.Forms.Button();
-            this.button28 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nmChainLength)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nmIternation)).BeginInit();
             this.SuspendLayout();
@@ -403,19 +397,9 @@
             this.ckBoneParentCurrentVisible.UseVisualStyleBackColor = true;
             this.ckBoneParentCurrentVisible.CheckedChanged += new System.EventHandler(this.ckBoneParentCurrentVisible_CheckedChanged);
             // 
-            // button12
-            // 
-            this.button12.Location = new System.Drawing.Point(12, 652);
-            this.button12.Name = "button12";
-            this.button12.Size = new System.Drawing.Size(75, 34);
-            this.button12.TabIndex = 39;
-            this.button12.Text = "바지입기";
-            this.button12.UseVisualStyleBackColor = true;
-            this.button12.Click += new System.EventHandler(this.button12_Click);
-            // 
             // button13
             // 
-            this.button13.Location = new System.Drawing.Point(173, 652);
+            this.button13.Location = new System.Drawing.Point(93, 642);
             this.button13.Name = "button13";
             this.button13.Size = new System.Drawing.Size(103, 34);
             this.button13.TabIndex = 40;
@@ -425,9 +409,9 @@
             // 
             // button14
             // 
-            this.button14.Location = new System.Drawing.Point(362, 652);
+            this.button14.Location = new System.Drawing.Point(282, 642);
             this.button14.Name = "button14";
-            this.button14.Size = new System.Drawing.Size(75, 34);
+            this.button14.Size = new System.Drawing.Size(88, 34);
             this.button14.TabIndex = 41;
             this.button14.Text = "헤어밴드";
             this.button14.UseVisualStyleBackColor = true;
@@ -435,7 +419,7 @@
             // 
             // button15
             // 
-            this.button15.Location = new System.Drawing.Point(93, 652);
+            this.button15.Location = new System.Drawing.Point(12, 642);
             this.button15.Name = "button15";
             this.button15.Size = new System.Drawing.Size(75, 34);
             this.button15.TabIndex = 42;
@@ -445,7 +429,7 @@
             // 
             // button16
             // 
-            this.button16.Location = new System.Drawing.Point(282, 652);
+            this.button16.Location = new System.Drawing.Point(202, 642);
             this.button16.Name = "button16";
             this.button16.Size = new System.Drawing.Size(75, 34);
             this.button16.TabIndex = 43;
@@ -455,7 +439,7 @@
             // 
             // button17
             // 
-            this.button17.Location = new System.Drawing.Point(93, 692);
+            this.button17.Location = new System.Drawing.Point(13, 682);
             this.button17.Name = "button17";
             this.button17.Size = new System.Drawing.Size(75, 34);
             this.button17.TabIndex = 44;
@@ -465,7 +449,7 @@
             // 
             // button18
             // 
-            this.button18.Location = new System.Drawing.Point(173, 692);
+            this.button18.Location = new System.Drawing.Point(93, 682);
             this.button18.Name = "button18";
             this.button18.Size = new System.Drawing.Size(103, 34);
             this.button18.TabIndex = 45;
@@ -473,105 +457,55 @@
             this.button18.UseVisualStyleBackColor = true;
             this.button18.Click += new System.EventHandler(this.button18_Click);
             // 
-            // button19
+            // button12
             // 
-            this.button19.Location = new System.Drawing.Point(443, 652);
-            this.button19.Name = "button19";
-            this.button19.Size = new System.Drawing.Size(75, 34);
-            this.button19.TabIndex = 46;
-            this.button19.Text = "눈붙이기";
-            this.button19.UseVisualStyleBackColor = true;
-            this.button19.Click += new System.EventHandler(this.button19_Click);
+            this.button12.Location = new System.Drawing.Point(202, 682);
+            this.button12.Name = "button12";
+            this.button12.Size = new System.Drawing.Size(75, 34);
+            this.button12.TabIndex = 47;
+            this.button12.Text = "짚신벗기";
+            this.button12.UseVisualStyleBackColor = true;
+            this.button12.Click += new System.EventHandler(this.button12_Click_1);
             // 
             // button20
             // 
-            this.button20.Location = new System.Drawing.Point(619, 692);
+            this.button20.Location = new System.Drawing.Point(283, 682);
             this.button20.Name = "button20";
-            this.button20.Size = new System.Drawing.Size(48, 34);
-            this.button20.TabIndex = 47;
-            this.button20.Text = "Y+";
+            this.button20.Size = new System.Drawing.Size(87, 34);
+            this.button20.TabIndex = 48;
+            this.button20.Text = "헤어밴드벗기";
             this.button20.UseVisualStyleBackColor = true;
             this.button20.Click += new System.EventHandler(this.button20_Click);
             // 
+            // button19
+            // 
+            this.button19.Location = new System.Drawing.Point(376, 642);
+            this.button19.Name = "button19";
+            this.button19.Size = new System.Drawing.Size(88, 34);
+            this.button19.TabIndex = 49;
+            this.button19.Text = "손잡기";
+            this.button19.UseVisualStyleBackColor = true;
+            this.button19.Click += new System.EventHandler(this.button19_Click);
+            // 
             // button21
             // 
-            this.button21.Location = new System.Drawing.Point(619, 652);
+            this.button21.Location = new System.Drawing.Point(376, 682);
             this.button21.Name = "button21";
-            this.button21.Size = new System.Drawing.Size(48, 34);
-            this.button21.TabIndex = 48;
-            this.button21.Text = "Y-";
+            this.button21.Size = new System.Drawing.Size(88, 34);
+            this.button21.TabIndex = 50;
+            this.button21.Text = "손펴기";
             this.button21.UseVisualStyleBackColor = true;
             this.button21.Click += new System.EventHandler(this.button21_Click);
             // 
             // button22
             // 
-            this.button22.Location = new System.Drawing.Point(565, 652);
+            this.button22.Location = new System.Drawing.Point(470, 642);
             this.button22.Name = "button22";
-            this.button22.Size = new System.Drawing.Size(48, 34);
-            this.button22.TabIndex = 49;
-            this.button22.Text = "X+";
+            this.button22.Size = new System.Drawing.Size(88, 34);
+            this.button22.TabIndex = 51;
+            this.button22.Text = "삿갓쓰기";
             this.button22.UseVisualStyleBackColor = true;
             this.button22.Click += new System.EventHandler(this.button22_Click);
-            // 
-            // button23
-            // 
-            this.button23.Location = new System.Drawing.Point(565, 692);
-            this.button23.Name = "button23";
-            this.button23.Size = new System.Drawing.Size(48, 34);
-            this.button23.TabIndex = 50;
-            this.button23.Text = "X-";
-            this.button23.UseVisualStyleBackColor = true;
-            this.button23.Click += new System.EventHandler(this.button23_Click);
-            // 
-            // button24
-            // 
-            this.button24.Location = new System.Drawing.Point(673, 652);
-            this.button24.Name = "button24";
-            this.button24.Size = new System.Drawing.Size(48, 34);
-            this.button24.TabIndex = 51;
-            this.button24.Text = "Z+";
-            this.button24.UseVisualStyleBackColor = true;
-            this.button24.Click += new System.EventHandler(this.button24_Click);
-            // 
-            // button25
-            // 
-            this.button25.Location = new System.Drawing.Point(673, 692);
-            this.button25.Name = "button25";
-            this.button25.Size = new System.Drawing.Size(48, 34);
-            this.button25.TabIndex = 52;
-            this.button25.Text = "Z-";
-            this.button25.UseVisualStyleBackColor = true;
-            this.button25.Click += new System.EventHandler(this.button25_Click);
-            // 
-            // button26
-            // 
-            this.button26.Location = new System.Drawing.Point(727, 652);
-            this.button26.Name = "button26";
-            this.button26.Size = new System.Drawing.Size(48, 34);
-            this.button26.TabIndex = 53;
-            this.button26.Text = "출력";
-            this.button26.UseVisualStyleBackColor = true;
-            this.button26.Click += new System.EventHandler(this.button26_Click);
-            // 
-            // button27
-            // 
-            this.button27.Location = new System.Drawing.Point(781, 652);
-            this.button27.Name = "button27";
-            this.button27.Size = new System.Drawing.Size(48, 34);
-            this.button27.TabIndex = 54;
-            this.button27.Text = "Deg+";
-            this.button27.UseVisualStyleBackColor = true;
-            this.button27.Click += new System.EventHandler(this.button27_Click);
-            // 
-            // button28
-            // 
-            this.button28.Location = new System.Drawing.Point(781, 692);
-            this.button28.Name = "button28";
-            this.button28.Size = new System.Drawing.Size(48, 34);
-            this.button28.TabIndex = 55;
-            this.button28.Text = "Deg-";
-            this.button28.UseVisualStyleBackColor = true;
-            this.button28.Click += new System.EventHandler(this.button28_Click);
             // 
             // Form3D
             // 
@@ -579,23 +513,17 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
             this.ClientSize = new System.Drawing.Size(1223, 844);
-            this.Controls.Add(this.button28);
-            this.Controls.Add(this.button27);
-            this.Controls.Add(this.button26);
-            this.Controls.Add(this.button25);
-            this.Controls.Add(this.button24);
-            this.Controls.Add(this.button23);
             this.Controls.Add(this.button22);
             this.Controls.Add(this.button21);
-            this.Controls.Add(this.button20);
             this.Controls.Add(this.button19);
+            this.Controls.Add(this.button20);
+            this.Controls.Add(this.button12);
             this.Controls.Add(this.button18);
             this.Controls.Add(this.button17);
             this.Controls.Add(this.button16);
             this.Controls.Add(this.button15);
             this.Controls.Add(this.button14);
             this.Controls.Add(this.button13);
-            this.Controls.Add(this.button12);
             this.Controls.Add(this.ckBoneParentCurrentVisible);
             this.Controls.Add(this.button11);
             this.Controls.Add(this.button10);
@@ -667,22 +595,16 @@
         private System.Windows.Forms.Button button10;
         private System.Windows.Forms.Button button11;
         private System.Windows.Forms.CheckBox ckBoneParentCurrentVisible;
-        private System.Windows.Forms.Button button12;
         private System.Windows.Forms.Button button13;
         private System.Windows.Forms.Button button14;
         private System.Windows.Forms.Button button15;
         private System.Windows.Forms.Button button16;
         private System.Windows.Forms.Button button17;
         private System.Windows.Forms.Button button18;
-        private System.Windows.Forms.Button button19;
+        private System.Windows.Forms.Button button12;
         private System.Windows.Forms.Button button20;
+        private System.Windows.Forms.Button button19;
         private System.Windows.Forms.Button button21;
         private System.Windows.Forms.Button button22;
-        private System.Windows.Forms.Button button23;
-        private System.Windows.Forms.Button button24;
-        private System.Windows.Forms.Button button25;
-        private System.Windows.Forms.Button button26;
-        private System.Windows.Forms.Button button27;
-        private System.Windows.Forms.Button button28;
     }
 }

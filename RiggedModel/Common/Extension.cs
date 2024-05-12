@@ -1,5 +1,7 @@
-﻿using OpenGL;
+﻿using LSystem.Animate;
+using OpenGL;
 using System;
+using System.Collections.Generic;
 
 namespace LSystem
 {
@@ -118,9 +120,9 @@ namespace LSystem
             return (float)Math.Sqrt(vec.Dot(vec));
         }
 
-        public static Matrix4x4f Scaled(Vertex3f scale)
+        public static Matrix4x4f Scaled(this Matrix4x4f mat, Vertex3f scale)
         {
-            Matrix4x4f mat = Matrix4x4f.Identity;
+            mat = Matrix4x4f.Identity;
             mat[0, 0] = scale.x;
             mat[1, 1] = scale.y;
             mat[2, 2] = scale.z;
@@ -214,19 +216,18 @@ namespace LSystem
             return m;
         }
 
-        public static Matrix3x3f Frame(Vertex3f x, Vertex3f y, Vertex3f z)
+        public static Matrix3x3f Frame(this Matrix3x3f mat, Vertex3f x, Vertex3f y, Vertex3f z)
         {
-            Matrix3x3f m = Matrix3x3f.Identity;
-            m[0, 0] = x.x;
-            m[0, 1] = x.y;
-            m[0, 2] = x.z;
-            m[1, 0] = y.x;
-            m[1, 1] = y.y;
-            m[1, 2] = y.z;
-            m[2, 0] = z.x;
-            m[2, 1] = z.y;
-            m[2, 2] = z.z;
-            return m;
+            mat[0, 0] = x.x;
+            mat[0, 1] = x.y;
+            mat[0, 2] = x.z;
+            mat[1, 0] = y.x;
+            mat[1, 1] = y.y;
+            mat[1, 2] = y.z;
+            mat[2, 0] = z.x;
+            mat[2, 1] = z.y;
+            mat[2, 2] = z.z;
+            return mat;
         }
 
         /// <summary>
@@ -246,6 +247,24 @@ namespace LSystem
             m[2, 0] = mat[2, 0];
             m[2, 1] = mat[2, 1];
             m[2, 2] = mat[2, 2];
+            return m;
+        }
+
+        public static Matrix3x3f Nomalized(this Matrix3x3f mat)
+        {
+            Matrix3x3f m = Matrix3x3f.Identity;
+            float sx = 1.0f / mat.Column0.Norm();
+            float sy = 1.0f / mat.Column1.Norm();
+            float sz = 1.0f / mat.Column2.Norm();
+            m[0, 0] = mat[0, 0] * sx;
+            m[0, 1] = mat[0, 1] * sx;
+            m[0, 2] = mat[0, 2] * sx;
+            m[1, 0] = mat[1, 0] * sy;
+            m[1, 1] = mat[1, 1] * sy;
+            m[1, 2] = mat[1, 2] * sy;
+            m[2, 0] = mat[2, 0] * sz;
+            m[2, 1] = mat[2, 1] * sz;
+            m[2, 2] = mat[2, 2] * sz;
             return m;
         }
 

@@ -89,6 +89,8 @@
     <Compile Include="Animate\BoneAngle.cs" />
     <Compile Include="Animate\Clothes.cs" />
     <Compile Include="Animate\ColorPoint.cs" />
+    <Compile Include="Animate\HumanAniModel.cs" />
+    <Compile Include="Animate\Mammal.cs" />
     <Compile Include="Animate\MeshTriangles.cs" />
     <Compile Include="Animate\Motion.cs" />
     <Compile Include="Animate\Animator.cs" />
