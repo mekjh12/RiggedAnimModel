@@ -1,24 +1,27 @@
-﻿using Assimp;
-using OpenGL;
+﻿using OpenGL;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Policy;
-using System.Windows.Media.Animation;
-using System.Xml.Linq;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace LSystem.Animate
 {
     public class Motion
     {
-        private string _animationName;
-        private float _length;
-        private Dictionary<float, KeyFrame> _keyframes;
+        string _animationName;
+        float _length;
+        Dictionary<float, KeyFrame> _keyframes;
 
         public KeyFrame FirstKeyFrame => (_keyframes.Values.Count > 0) ? _keyframes.Values.ElementAt(0) : null;
 
         public KeyFrame LastKeyFrame => (_keyframes.Values.Count > 0) ? _keyframes.Values.ElementAt(_keyframes.Count - 1) : null;
+
+        public Dictionary<float, KeyFrame> Keyframes => _keyframes;
+
+        public float Length => _length;
+
+        public string Name => _animationName;
+
+        public int KeyFrameCount => _keyframes.Count;
 
         public KeyFrame MiddleKeyFrame
         {
@@ -50,14 +53,6 @@ namespace LSystem.Animate
             }
         }
 
-
-        public Dictionary<float, KeyFrame> Keyframes => _keyframes;
-
-        public float Length => _length;
-
-        public string Name => _animationName;
-
-        public int KeyFrameCount => _keyframes.Count;
 
         public Motion(string name, float lengthInSeconds)
         {

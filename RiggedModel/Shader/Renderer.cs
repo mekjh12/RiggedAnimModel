@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
+using System.Text;
 using OpenGL;
 
 namespace LSystem
@@ -178,8 +180,8 @@ namespace LSystem
             if (entity.PolygonMode != 0) Gl.PolygonMode(MaterialFace.FrontAndBack, entity.PolygonMode);
 
             shader.Bind();
-
-            shader.LoadModelMatrix(entity.ModelMatrix * bindShapeMatrix);
+            shader.LoadPosModel(entity.BindMatrix);
+            shader.LoadModelMatrix(bindShapeMatrix * entity.ModelMatrix);
             shader.LoadViewMatrix(camera.ViewMatrix);
             shader.LoadProjMatrix(camera.ProjectiveMatrix);
 

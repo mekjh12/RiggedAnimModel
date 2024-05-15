@@ -120,13 +120,13 @@ namespace LSystem
             return (float)Math.Sqrt(vec.Dot(vec));
         }
 
-        public static Matrix4x4f Scaled(this Matrix4x4f mat, Vertex3f scale)
+        public static Matrix4x4f Scaled(this Matrix4x4f src, Vertex3f scale)
         {
-            mat = Matrix4x4f.Identity;
+            Matrix4x4f mat = Matrix4x4f.Identity;
             mat[0, 0] = scale.x;
             mat[1, 1] = scale.y;
             mat[2, 2] = scale.z;
-            return mat;
+            return mat * src;
         }
 
         /// <summary>

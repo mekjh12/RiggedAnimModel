@@ -17,6 +17,8 @@ uniform mat4 jointTransforms[MAX_JOINTS];
 uniform mat4 proj;
 uniform mat4 view;
 uniform mat4 model;
+uniform mat4 pmodel;
+
 
 uniform bool isOnlyOneJointWeight;
 uniform int jointIndex;
@@ -29,7 +31,7 @@ void main(void)
 	if (isOnlyOneJointWeight)
 	{
 		mat4 jointTransform = jointTransforms[jointIndex];
-		vec4 posePosition = jointTransform * vec4(in_position, 1.0);
+		vec4 posePosition = jointTransform * pmodel * vec4(in_position, 1.0);
 		totalLocalPos += posePosition;
 
 		vec4 worldNormal = jointTransform * vec4(in_normal, 0.0);
@@ -43,7 +45,7 @@ void main(void)
 			//if (index == 0) continue;
 			mat4 jointTransform = jointTransforms[index];
 
-			vec4 posePosition = jointTransform * vec4(in_position, 1.0);
+			vec4 posePosition = jointTransform * pmodel * vec4(in_position, 1.0);
 			totalLocalPos += posePosition * in_weights[i];
 		
 			vec4 worldNormal = jointTransform * vec4(in_normal, 0.0);
@@ -53,7 +55,6 @@ void main(void)
 
 	gl_Position = proj * view * model * totalLocalPos;
 
-	//gl_Position = proj * view * model * vec4(in_position, 1.0);
 	pass_normals = totalNormal.xyz;
 	pass_textureCoords = in_textureCoords;
 	pass_weights = in_weights;

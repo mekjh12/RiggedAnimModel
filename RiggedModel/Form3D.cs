@@ -5,12 +5,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace LSystem
 {
     public partial class Form3D : Form
     {
+        bool _isLoad = false;
+
         EngineLoop _gameLoop;
         List<Entity> _entities;
         StaticShader _shader;
@@ -30,11 +33,12 @@ namespace LSystem
         Vertex3f _centerPoint = new Vertex3f(0.0f, 0.0f, 0.0f);
         float _theta = 0.0f;
 
-        Vertex3f _bgColor = new Vertex3f(0.1f, 0.1f, 0.1f);
+        Vertex3f _bgColor = new Vertex3f(0.1f, 0.1f, 0.9f);
 
         CTrackBar trFov;
         CTrackBar trAxisLength;
         CTrackBar trAxisThick;
+
 
 
         public static float _rot = 0.0f;
@@ -48,7 +52,7 @@ namespace LSystem
             // 화면구성
             // --------------------------------------------------------------------------------------
             trFov = new CTrackBar("Fov", 20, 160, 1);
-            trFov.Location = new System.Drawing.Point(this.glControl1.Right + margin, this.ckBoneBindPose.Bottom + margin);
+            trFov.Location = new System.Drawing.Point(this.cbItem.Right + margin, this.ckBoneBindPose.Bottom + margin);
             this.Controls.Add(trFov);
 
             trAxisLength = new CTrackBar("AxisLength", 1, 60, 1);
@@ -58,7 +62,6 @@ namespace LSystem
             trAxisThick = new CTrackBar("AxisThick", 1, 600, 1);
             trAxisThick.Location = new System.Drawing.Point(this.trAxisLength.Left, this.trAxisLength.Bottom + margin);
             this.Controls.Add(trAxisThick);
-
         }
 
         private void Form3D_Load(object sender, EventArgs e)
@@ -87,25 +90,36 @@ namespace LSystem
                 }
             }
 
-            string[] files = Directory.GetFiles(EngineLoop.PROJECT_PATH + "\\Res\\Action\\");
-            foreach (string fn in files)
+            foreach (string fn in Directory.GetFiles(EngineLoop.PROJECT_PATH + "\\Res\\Items\\"))
             {
                 if (Path.GetExtension(fn) == ".dae")
-                    this.cbAction.Items.Add(Path.GetFileNameWithoutExtension(fn));
+                    this.cbItem.Items.Add(Path.GetFileNameWithoutExtension(fn));
             }
+
+            for (int i = 0; i < (int)Mammal.BODY_PART.Count; i++)
+            {
+                this.cbBodyPart.Items.Add(((Mammal.BODY_PART)i).ToString());
+            }
+
 
             if (this.cbCharacter.Items.Count > 0)
             {
                 xmlDae = new XmlDae(EngineLoop.PROJECT_PATH + $"\\Res\\{cbCharacter.Items[0]}", isLoadAnimation: false);
-                xmlDae.AddAction(EngineLoop.PROJECT_PATH + "\\Res\\Action\\Interpolation Pose.dae");
+                //xmlDae.AddAction(EngineLoop.PROJECT_PATH + "\\Res\\Action\\Interpolation Pose.dae");
 
                 Entity daeEntity = new Entity("aniModel", xmlDae.Models.ToArray());
                 _humanAniModel = new HumanAniModel("main1", daeEntity, xmlDae);
-                _humanAniModel.SetMotion(xmlDae.DefaultMotion.Name);
-                _selectedAniModel = _humanAniModel;
+
+                if (xmlDae.Motions.DefaultMotion != null)
+                {
+                    _humanAniModel.SetMotion(xmlDae.Motions.DefaultMotion.Name);
+                    _selectedAniModel = _humanAniModel;
+                }
                 //this.cbCharacter.Text = "heroNasty.dae"; // xmlDae.DefaultMotion.Name;
                 //this.cbAction.Text = (string)this.cbAction.Items[0];
             }
+
+            LoadItemEntity(EngineLoop.PROJECT_PATH + "\\Res\\Items\\");
 
 
             // 설정 읽어오기
@@ -226,7 +240,7 @@ namespace LSystem
                 if (Keyboard.IsKeyDown(Key.D6)) entity.Pitch(-1);
 
                 OrbitCamera camera = _gameLoop.Camera as OrbitCamera;
-                this.lblTime.Text = "time=" + _humanAniModel.MotionTime.Round(3) + "/" + _humanAniModel.Animator.CurrentMotion.Length.Round(3);
+                this.lblTime.Text = "time=" + _humanAniModel.MotionTime.Round(3) + "/" + _humanAniModel.Animator.CurrentMotion?.Length.Round(3);
                 this.Text = $"{FramePerSecond.FPS}fps, t={FramePerSecond.GlobalTick} p={camera.Position}, distance={camera.Distance}";
 
             };
@@ -406,7 +420,7 @@ namespace LSystem
         private void glControl1_MouseDoubleClick(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             Camera camera = _gameLoop.Camera;
-            Bone bone = _humanAniModel.GetBoneByName("mixamorig_eyeLeft");
+            Bone bone = _humanAniModel.GetBoneByName(this.cbBone.Text);
             if (bone != null)
             {
                 camera.GoTo(bone.AnimatedTransform.Position + _humanAniModel.Transform.Matrix4x4f.Position);
@@ -472,13 +486,19 @@ namespace LSystem
         private void cbCharacter_SelectedIndexChanged(object sender, EventArgs e)
         {
             xmlDae = new XmlDae(EngineLoop.PROJECT_PATH + $"\\Res\\{this.cbCharacter.Text}", isLoadAnimation: false);
-            string[] files = Directory.GetFiles(EngineLoop.PROJECT_PATH + "\\Res\\Action\\");
+
+            // *** Action ***
             this.cbAction.Items.Clear();
-            xmlDae.AddAction(EngineLoop.PROJECT_PATH + "\\Res\\Action\\Interpolation Pose.dae");
-            foreach (string fn in files)
+            foreach (string fn in Directory.GetFiles(EngineLoop.PROJECT_PATH + "\\Res\\Action\\"))
             {
                 if (Path.GetExtension(fn) == ".dae")
-                    this.cbAction.Items.Add(xmlDae.AddAction(fn));
+                {
+                    XmlDocument xml = new XmlDocument();
+                    xml.Load(fn);
+                    string motionName = Path.GetFileNameWithoutExtension(fn);
+                    XmlLoader.LoadMixamoMotion(xmlDae, xml, motionName);
+                    this.cbAction.Items.Add(Path.GetFileNameWithoutExtension(fn));
+                }
             }
 
             Entity daeEntity = new Entity("aniModel", xmlDae.Models.ToArray());
@@ -487,8 +507,12 @@ namespace LSystem
 
             _humanAniModel = new HumanAniModel("main", daeEntity, xmlDae);
             _humanAniModel.Transform.SetPosition(new Vertex3f(0, 1, 0));
-            _humanAniModel.SetMotion(xmlDae.DefaultMotion.Name);
-            _selectedAniModel = _humanAniModel;
+
+            if (xmlDae.Motions.DefaultMotion != null)
+            {
+                _humanAniModel.SetMotion(xmlDae.Motions.DefaultMotion.Name);
+                _selectedAniModel = _humanAniModel;
+            }
         }
 
         private void btnCharacterDelete_Click(object sender, EventArgs e)
@@ -612,7 +636,7 @@ namespace LSystem
 
         private void button15_Click(object sender, EventArgs e)
         {
-            _humanAniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\pants.dae");
+            _humanAniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\pants.dae"); //Merchant_Torso
         }
 
         private void button16_Click(object sender, EventArgs e)
@@ -623,49 +647,401 @@ namespace LSystem
         private void button17_Click(object sender, EventArgs e)
         {
             _humanAniModel.Entities.Remove("pants");
+            _humanAniModel.Entities.Remove("jeogori");
+            _humanAniModel.Entities.Remove("gipshin");
+            _humanAniModel.Entities.Remove("nobiHairBand");
         }
 
         private void button18_Click(object sender, EventArgs e)
         {
-            _humanAniModel.Entities.Remove("jeogori");
+            
         }
 
         private void button12_Click_1(object sender, EventArgs e)
         {
-            _humanAniModel.Entities.Remove("gipshin");
         }
 
         private void button20_Click(object sender, EventArgs e)
         {
-            _humanAniModel.Entities.Remove("nobiHairBand");
         }
 
         private void button19_Click(object sender, EventArgs e)
         {
             string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\sword1.dae";
-            TexturedModel texturedModel = xmlDae.LoadFileOnly(fileName);
-            Entity entity1 = new Entity("mixamorig_LeftHand_Item1", texturedModel);
-            Entity entity2 = new Entity("mixamorig_LeftHand_Item2", texturedModel);
-            _humanAniModel.HandGrab(Mammal.Hand.LeftHand, entity1);
-            _humanAniModel.HandGrab(Mammal.Hand.RightHand, entity2);
-            _humanAniModel.FoldHand(Mammal.Hand.LeftHand);
-            _humanAniModel.FoldHand(Mammal.Hand.RightHand);
+            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fileName);
+            Entity entity1 = new Entity(Path.GetFileNameWithoutExtension(fileName) + "1", texturedModel);
+            Entity entity2 = new Entity(Path.GetFileNameWithoutExtension(fileName) + "2", texturedModel);
+            entity1.BindTransform(sx:13, sy:3, sz:13, roty:90, y:2);
+            _humanAniModel.Attach(Mammal.BODY_PART.LeftHand, entity1);
+            _humanAniModel.Attach(Mammal.BODY_PART.RightHand, entity2);
+            _humanAniModel.FoldHand(Mammal.BODY_PART.LeftHand);
+            _humanAniModel.FoldHand(Mammal.BODY_PART.RightHand);
         }
 
         private void button21_Click(object sender, EventArgs e)
         {
-            _humanAniModel.UnfoldHand(Mammal.Hand.LeftHand);
-            _humanAniModel.UnfoldHand(Mammal.Hand.RightHand);
-            _humanAniModel.RemoveHandGrab(Mammal.Hand.LeftHand);
-            _humanAniModel.RemoveHandGrab(Mammal.Hand.RightHand);
+            _humanAniModel.UnfoldHand(Mammal.BODY_PART.LeftHand);
+            _humanAniModel.UnfoldHand(Mammal.BODY_PART.RightHand);
+            _humanAniModel.RemoveItem(Mammal.BODY_PART.LeftHand);
+            _humanAniModel.RemoveItem(Mammal.BODY_PART.RightHand);
         }
 
         private void button22_Click(object sender, EventArgs e)
         {
-            string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\soilder_cap.dae";
-            TexturedModel texturedModel = xmlDae.LoadFileOnly(fileName);
-            Entity entity1 = new Entity("mixamorig_Head_SoilderCap", texturedModel);
-            _humanAniModel.HandGrab(Mammal.Hand.Head, entity1);
+            string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\Merchant_Hat.dae";
+            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fileName);            
+            Entity entity1 = new Entity(Path.GetFileNameWithoutExtension(fileName), texturedModel);
+            entity1.BindTransform(sx:135, sy:135, sz:135);
+            _humanAniModel.Attach(Mammal.BODY_PART.Head, entity1);
+        }
+
+        private void button23_Click(object sender, EventArgs e)
+        {
+            string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\lamp.dae";
+            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fileName);
+            Entity entity1 = new Entity(Path.GetFileNameWithoutExtension(fileName), texturedModel);
+            entity1.BindTransform(roty: 180, rotz: -90, sx: 5, sy: 5, sz: 5);
+            _humanAniModel.Attach(Mammal.BODY_PART.LeftHand, entity1);
+            _humanAniModel.FoldHand(Mammal.BODY_PART.LeftHand);
+        }
+
+        private void button24_Click(object sender, EventArgs e)
+        {
+            _humanAniModel.RemoveItem(Mammal.BODY_PART.LeftHand);
+            _humanAniModel.RemoveItem(Mammal.BODY_PART.RightHand);
+        }
+
+        private void button25_Click(object sender, EventArgs e)
+        {
+            _humanAniModel.LeftHandEntity?.BindTransform(roty: 0);
+        }
+
+        private void button26_Click(object sender, EventArgs e)
+        {
+            _humanAniModel.UnfoldHand(Mammal.BODY_PART.LeftHand);
+            _humanAniModel.UnfoldHand(Mammal.BODY_PART.RightHand);
+        }
+
+        private void button25_Click_1(object sender, EventArgs e)
+        {
+            _humanAniModel.RemoveItem(Mammal.BODY_PART.Head);
+        }
+
+        private void button12_Click_2(object sender, EventArgs e)
+        {
+
+        }
+
+        Dictionary<string, Entity> _items = new Dictionary<string, Entity>();
+
+        public void LoadItemEntity(string directory)
+        {
+            foreach (string fn in Directory.GetFiles(directory))
+            {
+                if (Path.GetExtension(fn) == ".dae")
+                {
+                    TexturedModel texturedModel = XmlLoader.LoadFileOnly(fn);
+                    Entity entity = new Entity(Path.GetFileNameWithoutExtension(fn), texturedModel);
+
+                    string fileNameBind = fn.Replace(".dae", "_bind.txt");
+                    if (File.Exists(fileNameBind))
+                    {
+                        string[] cols = File.ReadAllText(fileNameBind).Split(new char[] { ',' });
+                        if (cols.Length == 9)
+                        {
+                            float[] values = new float[cols.Length];
+                            for (int i = 0; i < 9; i++) values[i] = float.Parse(cols[i].Trim());
+                            entity.BindTransform(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{fn} 파일 구조가 맞지 않아 기본 구조로 로딩하였습니다.");
+                            entity.BindTransform();
+                        }
+                    }
+                    else
+                    {
+                        File.WriteAllText(fileNameBind, "1,1,1,0,0,0,0,0,0");
+                        entity.BindTransform(sx: 1, sy: 1, sz: 1);
+                    }
+
+                    _items.Add(Path.GetFileNameWithoutExtension(fn), entity);
+                }
+            }
+        }
+
+        private void cbBodyPart_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                _humanAniModel.Attach((Mammal.BODY_PART)this.cbBodyPart.SelectedIndex, _items[cbItem.Text]);
+            }
+            else
+            {
+                Console.WriteLine("선택하신 Entity가 없습니다.");
+            }
+        }
+
+        private void button18_Click_1(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x + float.Parse(txtStep.Text), entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z, 
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button20_Click_1(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x - float.Parse(txtStep.Text), entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button28_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y + float.Parse(txtStep.Text), entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button27_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y - float.Parse(txtStep.Text), entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button30_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z + float.Parse(txtStep.Text),
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button29_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z - float.Parse(txtStep.Text),
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button43_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                string dir = EngineLoop.PROJECT_PATH + "\\Res\\Items\\";
+                string fileNameBind = dir + "\\" + cbItem.Text + "_bind.txt";
+                File.WriteAllText(fileNameBind, $"{entity.Sc.x},{entity.Sc.y},{entity.Sc.z},{entity.Rot.x},{entity.Rot.y},{entity.Rot.z},{entity.Pos.x},{entity.Pos.y},{entity.Pos.z}");
+                Console.WriteLine($"{fileNameBind} 저장 완료!");
+            }
+        }
+
+        private void button42_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x + float.Parse(txtStep.Text), entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button41_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x - float.Parse(txtStep.Text), entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button40_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y + float.Parse(txtStep.Text), entity.Pos.z);
+            }
+        }
+
+        private void button39_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y - float.Parse(txtStep.Text), entity.Pos.z);
+            }
+        }
+
+        private void button38_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z + float.Parse(txtStep.Text));
+            }
+        }
+
+        private void button37_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z - float.Parse(txtStep.Text));
+            }
+        }
+
+        private void button36_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x + float.Parse(txtStep.Text), entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button35_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x - float.Parse(txtStep.Text), entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button33_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y - float.Parse(txtStep.Text), entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button34_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y + float.Parse(txtStep.Text), entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button31_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z - float.Parse(txtStep.Text),
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button32_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                entity.BindTransform(entity.Sc.x, entity.Sc.y, entity.Sc.z,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z + float.Parse(txtStep.Text),
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button45_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                float v = float.Parse(txtStep.Text);
+                entity.BindTransform(entity.Sc.x + v, entity.Sc.y + v, entity.Sc.z + v,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button44_Click(object sender, EventArgs e)
+        {
+            if (_items.ContainsKey(cbItem.Text))
+            {
+                Entity entity = _items[cbItem.Text];
+                float v = -float.Parse(txtStep.Text);
+                entity.BindTransform(entity.Sc.x + v, entity.Sc.y + v, entity.Sc.z + v,
+                    entity.Rot.x, entity.Rot.y, entity.Rot.z,
+                    entity.Pos.x, entity.Pos.y, entity.Pos.z);
+            }
+        }
+
+        private void button48_Click(object sender, EventArgs e)
+        {
+            this.txtStep.Text = "90.0";
+        }
+
+        private void button46_Click(object sender, EventArgs e)
+        {
+            this.txtStep.Text = "0.1";
+        }
+
+        private void button47_Click(object sender, EventArgs e)
+        {
+            this.txtStep.Text = "1.0";
+        }
+
+        private void button49_Click(object sender, EventArgs e)
+        {
+            _humanAniModel.RemoveItem((Mammal.BODY_PART)this.cbBodyPart.SelectedIndex);
+        }
+
+        private void button12_Click_3(object sender, EventArgs e)
+        {
+            string fn = EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\Merchant_Torso.dae";
+            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fn);
+            Entity entity = new Entity(Path.GetFileNameWithoutExtension(fn), texturedModel);
+            _humanAniModel.Attach(Mammal.BODY_PART.LeftHand, entity);
         }
     }
 }

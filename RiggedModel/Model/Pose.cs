@@ -13,7 +13,7 @@ namespace LSystem
             set => _q = value;
         }
 
-        public Matrix4x4f Matrix4x4f
+        public Matrix4x4f Rotation
         {
             get
             {

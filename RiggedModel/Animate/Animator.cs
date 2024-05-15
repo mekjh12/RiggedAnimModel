@@ -42,7 +42,7 @@ namespace LSystem.Animate
         /// <param name="animation"></param>
         public void SetMotion(Motion motion, float blendingInterval = 0.2f)
         {
-            Console.WriteLine("현재지정하는 모션: " + motion?.Name);
+            Console.WriteLine("현재 지정하는 모션: " + motion?.Name);
 
             // 진행하고 있는 모션이 잇는 경우에 블렌딩 인터벌동안 블렌딩 처리함.
             if (_currentMotion == null)

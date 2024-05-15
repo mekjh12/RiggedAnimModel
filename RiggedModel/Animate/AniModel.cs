@@ -122,9 +122,13 @@ namespace LSystem.Animate
         /// <param name="motionName"></param>
         public void SetMotion(string motionName)
         {
-            Motion motion = _xmlDae.GetAnimation(motionName);
-            if (motion == null) motion = _xmlDae.DefaultMotion;
-            _animator.SetMotion(motion);
+            Motion motion = _xmlDae.Motions.GetMotion(motionName);
+
+            if (motion == null)
+                motion = _xmlDae.Motions.DefaultMotion;
+
+            if (motion != null)
+                _animator.SetMotion(motion);
         }
 
         /// <summary>
@@ -157,7 +161,7 @@ namespace LSystem.Animate
 
                 Entity mainEntity = item.Value;
                 Matrix4x4f modelMatrix = mainEntity.ModelMatrix;
-                
+
                 if (isSkinVisible) // 스킨
                 {
                     Gl.Disable(EnableCap.CullFace);

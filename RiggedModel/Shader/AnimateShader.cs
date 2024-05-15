@@ -1,4 +1,5 @@
 ﻿using OpenGL;
+using System.Windows.Media.Converters;
 
 namespace LSystem
 {
@@ -27,7 +28,7 @@ namespace LSystem
 
         protected override void GetAllUniformLocations()
         {
-            UniformLocations("model", "view", "proj");
+            UniformLocations("model", "view", "proj", "bind", "pmodel");
             UniformLocations("lightDirection");
             UniformLocations("diffuseMap");
             UniformLocations("isOnlyOneJointWeight", "jointIndex");
@@ -73,5 +74,18 @@ namespace LSystem
             base.LoadInt(_location["jointIndex"], jointIndex);
         }
 
+        public void LoadBindShapeMatrix(Matrix4x4f bindShapeMatrix)
+        {
+            base.LoadMatrix(_location["bind"], bindShapeMatrix);
+        }
+
+        /// <summary>
+        /// GPU position.xyz를 제일 처음 직접 변환하는 행렬를 넘겨준다.
+        /// </summary>
+        /// <param name="pmodel"></param>
+        public void LoadPosModel(Matrix4x4f pmodel)
+        {
+            base.LoadMatrix(_location["pmodel"], pmodel);
+        }
     }
 }
