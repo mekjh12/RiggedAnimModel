@@ -11,6 +11,7 @@ namespace LSystem.Animate
         string _filename; // dae
         MotionStorage _motions;
         List<TexturedModel> _texturedModels;
+        List<TexturedModel> _bodyTexturedModel;
         Bone _rootBone;
         
         Dictionary<string, Bone> _dicBones;
@@ -53,7 +54,9 @@ namespace LSystem.Animate
 
         public string[] BoneNames => _boneNames;
 
-        public List<TexturedModel> Models => _texturedModels;       
+        public List<TexturedModel> Models => _texturedModels;
+
+        public List<TexturedModel> BodyWeightModels => _bodyTexturedModel;
 
         /// <summary>
         /// 생성자
@@ -64,6 +67,7 @@ namespace LSystem.Animate
             _filename = filename;
 
             List<TexturedModel> models = LoadFile(filename);
+            _bodyTexturedModel = models;
 
             if (_texturedModels == null)
                 _texturedModels = new List<TexturedModel>();
@@ -85,7 +89,8 @@ namespace LSystem.Animate
             Dictionary<string, string> effectToImage = XmlLoader.LoadEffect(xml);
 
             // (2) library_geometries = position, normal, texcoord, color
-            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
+            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, 
+                out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals);
 
             // (3) library_controllers = boneIndex, boneWeight, bindShapeMatrix
             XmlLoader.LibraryController(xml, out List<string> clothBoneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
@@ -180,7 +185,8 @@ namespace LSystem.Animate
             Dictionary<string, string> effectToImage = XmlLoader.LoadEffect(xml);
 
             // (2) library_geometries = position, normal, texcoord, color
-            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
+            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, 
+                out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals);
 
             // (3) library_controllers = boneNames, InvBindPoses, boneIndex, boneWeight
             // invBindPoses는 계산할 수 있으므로 생략가능하다.
@@ -229,17 +235,18 @@ namespace LSystem.Animate
             foreach (MeshTriangles meshTriangles in meshes)
             {
                 int count = meshTriangles.Vertices.Count;
-                float[] postions = new float[count * 3];
+                float[] positions = new float[count * 3];
                 float[] texcoords = new float[count * 2];
+                float[] normals = new float[count * 3];
                 uint[] boneIndices = new uint[count * 4];
                 float[] boneWeights = new float[count * 4];
                 for (int i = 0; i < count; i++)
                 {
                     int idx = (int)meshTriangles.Vertices[i];
                     int tidx = (int)meshTriangles.Texcoords[i];
-                    postions[3 * i + 0] = lstPositions[idx].x;
-                    postions[3 * i + 1] = lstPositions[idx].y;
-                    postions[3 * i + 2] = lstPositions[idx].z;
+                    positions[3 * i + 0] = lstPositions[idx].x;
+                    positions[3 * i + 1] = lstPositions[idx].y;
+                    positions[3 * i + 2] = lstPositions[idx].z;
 
                     texcoords[2 * i + 0] = lstTexCoord[tidx].x;
                     texcoords[2 * i + 1] = lstTexCoord[tidx].y;
@@ -257,26 +264,24 @@ namespace LSystem.Animate
 
                 // 로딩한 postions, boneIndices, boneWeights를 버텍스로
                 List<Vertex3f> _vertices = new List<Vertex3f>();
-                List<Vertex4f> _boneIndices = new List<Vertex4f>();
+                List<Vertex2f> _texcoords = new List<Vertex2f>();
+                List<Vertex3f> _normals = new List<Vertex3f>();
+                List<Vertex4i> _boneIndices = new List<Vertex4i>();
                 List<Vertex4f> _boneWeights = new List<Vertex4f>();
-                int vertexNum = postions.Length / 3;
-                for (int i = 0; i < vertexNum; i++)
+                for (int i = 0; i < count; i++)
                 {
-                    _vertices.Add(new Vertex3f(postions[i * 3 + 0], postions[i * 3 + 1], postions[i * 3 + 2]));
-                    _boneIndices.Add(new Vertex4f(boneIndices[i * 4 + 0], boneIndices[i * 4 + 1], boneIndices[i * 4 + 2], boneIndices[i * 4 + 3]));
+                    _vertices.Add(new Vertex3f(positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2]));
+                    _texcoords.Add(new Vertex2f(texcoords[i * 2 + 0], texcoords[i * 2 + 1]));
+                    _normals.Add(new Vertex3f(normals[i * 3 + 0], normals[i * 3 + 1], normals[i * 3 + 2]));
+                    _boneIndices.Add(new Vertex4i((int)boneIndices[i * 4 + 0], (int)boneIndices[i * 4 + 1], 
+                            (int)boneIndices[i * 4 + 2], (int)boneIndices[i * 4 + 3]));
                     _boneWeights.Add(new Vertex4f(boneWeights[i * 4 + 0], boneWeights[i * 4 + 1], boneWeights[i * 4 + 2], boneWeights[i * 4 + 3]));
                 }
 
-                // VAO, VBO로 Raw3d 모델을 만든다.
-                uint vao = Gl.GenVertexArray();
-                Gl.BindVertexArray(vao);
-                GpuLoader.StoreDataInAttributeList(0, 3, postions, BufferUsage.StaticDraw);
-                GpuLoader.StoreDataInAttributeList(1, 2, texcoords, BufferUsage.StaticDraw);
-                GpuLoader.StoreDataInAttributeList(3, 4, boneIndices, BufferUsage.StaticDraw);
-                GpuLoader.StoreDataInAttributeList(4, 4, boneWeights, BufferUsage.StaticDraw);
-                //GpuLoader.BindIndicesBuffer(lstVertexIndices.ToArray());
-                Gl.BindVertexArray(0);
-                RawModel3d _rawModel = new RawModel3d(vao, postions);
+                RawModel3d _rawModel = new RawModel3d();
+                _rawModel.Init(vertices: _vertices.ToArray(), texCoords: _texcoords.ToArray(), normals: _normals.ToArray(), 
+                    boneIndex: _boneIndices.ToArray(), boneWeight: _boneWeights.ToArray());
+                _rawModel.GpuBind();
 
                 string effect = materialToEffect[meshTriangles.Material].Replace("#", "");
                 string imageName = (effectToImage[effect]);

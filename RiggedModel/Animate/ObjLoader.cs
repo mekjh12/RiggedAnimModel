@@ -85,7 +85,6 @@ namespace LSystem.Animate
             return new TexturedModel(rawModel, textures[TextureType.Diffuse][0]);
         }
 
-
         private static RawModel3d LoadRawModel3d(float[] positions, float[] textureCoords, float[] normals, uint[] indices)
         {
             // VAO의 경우
@@ -102,7 +101,7 @@ namespace LSystem.Animate
 
             Gl.BindVertexArray(0);
 
-            return new RawModel3d(vaoID, positions);
+            return null;// new RawModel3d(vaoID, positions, null, null, null);
         }
 
         private static unsafe uint storeDataInAttributeList(uint attributeNumber, int coordinateSize, float[] data, BufferUsage usage = BufferUsage.StaticDraw)

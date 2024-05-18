@@ -6,8 +6,8 @@ const int MAX_WEIGHTS = 4;
 layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec2 in_textureCoords;
 layout(location = 2) in vec3 in_normal;
-layout(location = 3) in vec4 in_jointIndices;
-layout(location = 4) in vec4 in_weights;
+layout(location = 4) in vec4 in_jointIndices;
+layout(location = 5) in vec4 in_weights;
 
 out vec3 pass_normals;
 out vec2 pass_textureCoords;

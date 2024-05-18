@@ -1,7 +1,5 @@
-﻿using LSystem.Animate;
-using OpenGL;
+﻿using OpenGL;
 using System;
-using System.Collections.Generic;
 
 namespace LSystem
 {

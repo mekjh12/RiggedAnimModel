@@ -1,10 +1,95 @@
 ﻿using OpenGL;
+using System;
 using System.Collections.Generic;
 
 namespace LSystem.Animate
 {
     class Clothes
     {
+        public static TexturedModel WearAssignWeightTransfer(List<TexturedModel> skinModels, string clothFileName)
+        {
+            TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(clothFileName);
+
+            foreach (TexturedModel skinModel in skinModels)
+            {
+                if (!skinModel.IsDrawElement)
+                {
+                    Vertex3f[] vertices = skinModel.Vertices;
+
+                    // AABB바운딩 구하기
+                    float maxValue = float.MinValue;
+                    float minValue = float.MaxValue;
+                    for (int i = 0; i < vertices.Length; i++)
+                    {
+                        maxValue = maxValue < vertices[i].z ? vertices[i].z : maxValue;
+                        minValue = minValue > vertices[i].z ? vertices[i].z : minValue;
+                    }
+                    float epsilon = 0.3f * (maxValue - minValue);
+
+
+                    int numTriangle = vertices.Length / 3;
+                    float[] map = new float[texturedModel.Vertices.Length];
+                    int[] mapIndex = new int[texturedModel.Vertices.Length];
+
+                    // t,u,v구하는 역행렬 구하기 
+                    Matrix3x3f[] invMat = new Matrix3x3f[numTriangle];
+                    for (int i = 0; i < numTriangle; i++)
+                    {
+                        Vertex3f v1 = vertices[3 * i + 0];
+                        Vertex3f v2 = vertices[3 * i + 1];
+                        Vertex3f v3 = vertices[3 * i + 2];
+                        Vertex3f e1 = v2 - v1;
+                        Vertex3f e2 = v3 - v1;
+                        Vertex3f d = e1.Cross(e2);
+                        Matrix3x3f m = Matrix3x3f.Identity;
+                        m[0, 0] = -d.x;
+                        m[0, 1] = -d.y;
+                        m[0, 2] = -d.z;
+                        m[1, 0] = e1.x;
+                        m[1, 1] = e1.y;
+                        m[1, 2] = e1.z;
+                        m[2, 0] = e2.x;
+                        m[2, 1] = e2.y;
+                        m[2, 2] = e2.z;
+
+                        invMat[i] = (m * 1000.0f).Inverse * 1000.0f;
+                    }
+
+                    //
+                    Vertex3f[] clothPoints = texturedModel.Vertices;
+                    for (int j = 0; j < clothPoints.Length; j++) 
+                        map[j] = float.MaxValue;
+
+                    for (int j = 0; j < clothPoints.Length; j++)
+                    {
+                        Vertex3f clothPoint = clothPoints[j];
+                        for (int i = 0; i < numTriangle; i++)
+                        {
+                            Vertex3f v1 = vertices[3 * i + 0];
+                            Vertex3f res = invMat[i] * (clothPoint - v1);
+                            float t = res.x;
+                            float u = res.y;
+                            float v = res.z;
+                            if (t < 0 && u + v < 1 && u > 0 && v > 0 && u < 1 && v < 1)
+                            {
+                                if (map[j] > -t)
+                                {
+                                    map[j] = -t;
+                                    mapIndex[j] = i;
+                                }
+                            }
+                        }
+
+                        //texturedModel.BoneIndex(j, new Vertex4i(5, 4, 0, 0));// skinModel.BoneIndices[mapIndex[j]]);
+                        //texturedModel.BoneWeight(j, new Vertex4f(0.5f, 0.5f, 0, 0));// skinModel.BoneWeights[mapIndex[j]]);
+                    }
+                }
+
+                texturedModel.GpuBind();
+            }
+            return texturedModel;
+        }
+
         private static void MergeOneTopology(List<Vertex3f> lstPositions, MeshTriangles meshTriangles,
             out List<Vertex3f> pList, out Vertex3f[] normals, out Dictionary<uint, uint> map,
             float expandValue = 0.0001f)
@@ -100,55 +185,24 @@ namespace LSystem.Animate
             }
 
             int count = meshTriangles.Vertices.Count;
-            float[] postions = new float[count * 3];
-            float[] texcoords = new float[count * 2];
-            uint[] boneIndices = new uint[count * 4];
-            float[] boneWeights = new float[count * 4];
+            List<Vertex3f> vertices = new List<Vertex3f>();
+            List<Vertex2f> texcoords = new List<Vertex2f>();
+            List<Vertex4i> boneIndices = new List<Vertex4i>();
+            List<Vertex4f> boneWeights = new List<Vertex4f>();
+
             for (int i = 0; i < count; i++)
             {
                 int idx = (int)meshTriangles.Vertices[i];
                 int tidx = (int)meshTriangles.Texcoords[i];
-                postions[3 * i + 0] = lstPositions[idx].x;
-                postions[3 * i + 1] = lstPositions[idx].y;
-                postions[3 * i + 2] = lstPositions[idx].z;
-
-                texcoords[2 * i + 0] = lstTexCoord[tidx].x;
-                texcoords[2 * i + 1] = lstTexCoord[tidx].y;
-
-                boneIndices[4 * i + 0] = (uint)lstBoneIndex[idx].x;
-                boneIndices[4 * i + 1] = (uint)lstBoneIndex[idx].y;
-                boneIndices[4 * i + 2] = (uint)lstBoneIndex[idx].z;
-                boneIndices[4 * i + 3] = (uint)lstBoneIndex[idx].w;
-
-                boneWeights[4 * i + 0] = (float)lstBoneWeight[idx].x;
-                boneWeights[4 * i + 1] = (float)lstBoneWeight[idx].y;
-                boneWeights[4 * i + 2] = (float)lstBoneWeight[idx].z;
-                boneWeights[4 * i + 3] = (float)lstBoneWeight[idx].w;
+                vertices.Add(lstPositions[idx]);
+                texcoords.Add(lstTexCoord[tidx]);
+                boneIndices.Add(lstBoneIndex[idx]);
+                boneWeights.Add(lstBoneWeight[idx]);
             }
 
-            // 로딩한 postions, boneIndices, boneWeights를 버텍스로
-            List<Vertex3f>  _vertices = new List<Vertex3f>();
-            List<Vertex4f>  _boneIndices = new List<Vertex4f>();
-            List<Vertex4f> _boneWeights = new List<Vertex4f>();
-            int vertexNum = postions.Length / 3;
-            for (int i = 0; i < vertexNum; i++)
-            {
-                _vertices.Add(new Vertex3f(postions[i * 3 + 0], postions[i * 3 + 1], postions[i * 3 + 2]));
-                _boneIndices.Add(new Vertex4f(boneIndices[i * 4 + 0], boneIndices[i * 4 + 1], boneIndices[i * 4 + 2], boneIndices[i * 4 + 3]));
-                _boneWeights.Add(new Vertex4f(boneWeights[i * 4 + 0], boneWeights[i * 4 + 1], boneWeights[i * 4 + 2], boneWeights[i * 4 + 3]));
-            }
-
-            // VAO, VBO로 Raw3d 모델을 만든다.
-            uint vao = Gl.GenVertexArray();
-            Gl.BindVertexArray(vao);
-            GpuLoader.StoreDataInAttributeList(0, 3, postions, BufferUsage.StaticDraw);
-            GpuLoader.StoreDataInAttributeList(1, 2, texcoords, BufferUsage.StaticDraw);
-            GpuLoader.StoreDataInAttributeList(3, 4, boneIndices, BufferUsage.StaticDraw);
-            GpuLoader.StoreDataInAttributeList(4, 4, boneWeights, BufferUsage.StaticDraw);
-            //GpuLoader.BindIndicesBuffer(lstVertexIndices.ToArray());
-            Gl.BindVertexArray(0);
-            RawModel3d _rawModel = new RawModel3d(vao, postions);
-
+            RawModel3d _rawModel = new RawModel3d();
+            _rawModel.Init(vertices: vertices.ToArray(), texCoords: texcoords.ToArray(), boneIndex: boneIndices.ToArray(), boneWeight:boneWeights.ToArray());
+            _rawModel.GpuBind();
             return _rawModel;
         }
     }

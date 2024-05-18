@@ -159,23 +159,23 @@ namespace LSystem.Animate
             {
                 Gl.PolygonMode(MaterialFace.FrontAndBack, _polygonMode);
 
-                Entity mainEntity = item.Value;
-                Matrix4x4f modelMatrix = mainEntity.ModelMatrix;
+                Entity entity = item.Value;
+                Matrix4x4f modelMatrix = entity.ModelMatrix;
 
                 if (isSkinVisible) // 스킨
                 {
                     Gl.Disable(EnableCap.CullFace);
                     if (_renderingMode == RenderingMode.Animation)
                     {
-                        Renderer.Render(ashader, _transform.Matrix4x4f, jointMatrix, mainEntity, camera);
+                        Renderer.Render(ashader, _transform.Matrix4x4f, jointMatrix, entity, camera);
                     }
                     else if (_renderingMode == RenderingMode.BoneWeight)
                     {
-                        Renderer.Render(boneWeightShader, _boneIndex, mainEntity, camera);
+                        Renderer.Render(boneWeightShader, _boneIndex, _transform.Matrix4x4f, entity, camera);
                     }
                     else if (_renderingMode == RenderingMode.Static)
                     {
-                        Renderer.Render(staticShader, mainEntity, camera);
+                        Renderer.Render(staticShader, entity, camera);
                     }
                     Gl.Enable(EnableCap.CullFace);
                 }
@@ -206,24 +206,14 @@ namespace LSystem.Animate
                               _transform.Matrix4x4f * modelMatrix * pBone.AnimatedTransform);
                     }
                 }
+
                 Renderer.RenderLocalAxis(staticShader, camera, size: 100.0f, thick: _drawThick, _rootBone.AnimatedTransform * _transform.Matrix4x4f);
 
-                /*
                 // 정지 뼈대
-                if (this.ckBoneBindPose.Checked)
+                //foreach (Matrix4x4f jointTransform in _aniModel.InverseBindPoseTransforms)
                 {
-                    foreach (Matrix4x4f jointTransform in _aniModel.InverseBindPoseTransforms)
-                    {
-                        Renderer.RenderLocalAxis(_shader, camera, size: _axisLength, thick: _drawThick,
-                            entityModel * jointTransform.Inverse);
-                    }
+                    //Renderer.RenderLocalAxis(_shader, camera, size: _axisLength, thick: _drawThick, entityModel * jointTransform.Inverse);
                 }
-
-                
-                
-
-                
-                */
             }
         }
 
@@ -318,6 +308,13 @@ namespace LSystem.Animate
             string name = Path.GetFileNameWithoutExtension(fileName);
             List<TexturedModel> texturedModels = _xmlDae.WearCloth(fileName, expandValue);
             Entity clothEntity = new Entity("aniModel_" + name, texturedModels[0]);
+            AddEntity(name, clothEntity);
+            return clothEntity;
+        }
+
+        public Entity Attach(string name, TexturedModel texturedModel)
+        {
+            Entity clothEntity = new Entity(name, texturedModel);
             AddEntity(name, clothEntity);
             return clothEntity;
         }

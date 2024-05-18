@@ -5,14 +5,13 @@ namespace LSystem
 {
     public class RawModel3d
     {
-        uint _vao;
         uint _vbo;
         uint _ibo;
-        int _indexCount;
-        int _vertexCount;
-        bool _isDrawElement;
+        uint _vao;
 
-        Vertex3f[] _vertices;
+        public uint VAO => _vao;
+
+        bool _isDrawElement;
 
         public bool IsDrawElement
         {
@@ -20,15 +19,7 @@ namespace LSystem
             set => _isDrawElement = value;
         }
 
-        public Vertex3f[] Vertices => _vertices;
-
-        public uint VAO => _vao;
-
-        public uint VBO => _vbo;
-
-        public uint IBO => _ibo;
-
-        public int IndicesCount => _indexCount;
+        int _vertexCount;
 
         public int VertexCount
         {
@@ -36,55 +27,77 @@ namespace LSystem
             set => _vertexCount = value;
         }
 
-        public RawModel3d(uint vao, Vertex3f[] vertices)
-        {
-            _isDrawElement = false;
-            _vao = vao;
-            _vertexCount = vertices.Length;
-            _vertices = vertices;
-        }
+        int _indexCount;
+       
+        Vertex3f[] _vertices;
+        Vertex2f[] _texCoords;
+        Vertex3f[] _normals;
+        Vertex3f[] _colors;
+        Vertex4i[] _boneIndex;
+        Vertex4f[] _boneWeight;
 
-        public RawModel3d(float[] positions)
+        public Vertex3f[] Vertices => _vertices;
+
+        public Vertex2f[] TexCoords => _texCoords;
+
+        public Vertex3f[] Normals => _normals;
+
+        public Vertex3f[] Colors => _colors;
+
+        public Vertex4i[] BoneIndices => _boneIndex;
+
+        public Vertex4f[] BoneWeights => _boneWeight;
+
+        public RawModel3d(bool isDrawElement = false)// Vertex3f[] vertices, Vertex2f[] texCoords = null, Vertex3f[] normals = null, Vertex4i[] boneIndex = null, Vertex4f[] boneWeight = null)
         {
-            // VAO, VBO 생성
             _vao = Gl.GenVertexArray();
-            Gl.BindVertexArray(_vao);
-            _vbo = StoreDataInAttributeList(0, 3, positions);
-            Gl.BindVertexArray(0);
-
-            // 기본 정보을 개체에 가져옴.
-            _vertices = GetVertexArray(positions);
             _isDrawElement = false;
         }
 
-        public RawModel3d(float[] positions, float[] normals)
+        public void Init(Vertex3f[] vertices = null, Vertex2f[] texCoords = null, Vertex3f[] normals = null, Vertex3f[] colors = null,
+            Vertex4i[] boneIndex = null, Vertex4f[] boneWeight = null)
         {
-            // VAO, VBO 생성
-            _vao = Gl.GenVertexArray();
-            Gl.BindVertexArray(_vao);
-            _vbo = StoreDataInAttributeList(0, 3, positions);
-            Gl.BindVertexArray(0);
-
-            // 기본 정보을 개체에 가져옴.
-            _vertices = GetVertexArray(positions);
-            _isDrawElement = false;
-        }
-
-        /// <summary>
-        /// 생성자
-        /// </summary>
-        /// <param name="vao"></param>
-        /// <param name="positions"></param>
-        public RawModel3d(uint vao, float[] positions)
-        {
-            _isDrawElement = false;
-            _vao = vao;
-            _vertexCount = positions.Length / 3;
-            _vertices = new Vertex3f[_vertexCount];
-
-            for (int i = 0; i < _vertexCount; i++)
+            if (vertices != null)
             {
-                _vertices[i] = new Vertex3f(positions[3 * i + 0], positions[3 * i + 1], positions[3 * i + 2]);
+                _vertexCount = vertices.Length;
+                _vertices = new Vertex3f[_vertexCount];
+                for (int i = 0; i < vertices.Length; i++)
+                    _vertices[i] = vertices[i];
+            }
+
+            if (texCoords != null)
+            {
+                _texCoords = new Vertex2f[texCoords.Length];
+                for (int i = 0; i < texCoords.Length; i++)
+                    _texCoords[i] = texCoords[i];
+            }
+
+            if (normals != null)
+            {
+                _normals = new Vertex3f[normals.Length];
+                for (int i = 0; i < normals.Length; i++)
+                    _normals[i] = normals[i];
+            }
+
+            if (colors != null)
+            {
+                _colors = new Vertex3f[colors.Length];
+                for (int i = 0; i < colors.Length; i++)
+                    _colors[i] = colors[i];
+            }
+
+            if (boneIndex != null)
+            {
+                _boneIndex = new Vertex4i[boneIndex.Length];
+                for (int i = 0; i < boneIndex.Length; i++)
+                    _boneIndex[i] = boneIndex[i];
+            }
+
+            if (boneWeight != null)
+            {
+                _boneWeight = new Vertex4f[boneWeight.Length];
+                for (int i = 0; i < boneWeight.Length; i++)
+                    _boneWeight[i] = boneWeight[i];
             }
         }
 
@@ -102,50 +115,97 @@ namespace LSystem
         }
 
         /// <summary>
-        /// 실수형 배열을 Vertex3f 배열로 반환한다.
+        /// 
         /// </summary>
-        /// <param name="array"></param>
-        /// <returns></returns>
-        private Vertex3f[] GetVertexArray(float[] array)
+        public void GpuBind()
         {
-            if (array.Length % 3 != 0)
-                new Exception("배열의 갯수는 3의 배수이어야 합니다.");
+            if (_vao >= 0) Clean();
 
-            int vertexCount = array.Length / 3;
-            Vertex3f[] vertices = new Vertex3f[vertexCount];
-            for (int i = 0; i < vertexCount; i++)
+            float[] postions;
+            float[] texcoords;
+            float[] normals;
+            float[] colors;
+            uint[] boneIndices;
+            float[] boneWeights;
+
+            _vao = Gl.GenVertexArray();
+            Gl.BindVertexArray(_vao);
+
+            if (_vertices != null)
             {
-                vertices[i] = new Vertex3f(array[3 * i + 0], array[3 * i + 1], array[3 * i + 2]);
+                postions = new float[_vertices.Length * 3];
+                for (int i = 0; i < _vertices.Length; i++)
+                {
+                    postions[3 * i + 0] = _vertices[i].x;
+                    postions[3 * i + 1] = _vertices[i].y;
+                    postions[3 * i + 2] = _vertices[i].z;
+                }
+                GpuLoader.StoreDataInAttributeList(0, 3, postions, BufferUsage.StaticDraw);
             }
-            return vertices;
-        }
 
-        /// <summary>
-        /// * data를 gpu에 올리고 vbo를 반환한다.<br/>
-        /// * vao는 함수 호출 전에 바인딩하여야 한다.<br/>
-        /// </summary>
-        /// <param name="attributeNumber">attributeNumber 슬롯 번호</param>
-        /// <param name="coordinateSize">자료의 벡터 성분의 개수 (예) vertex3f는 3이다.</param>
-        /// <param name="data"></param>
-        /// <param name="usage"></param>
-        /// <returns>vbo를 반환</returns>
-        public static unsafe uint StoreDataInAttributeList(uint attributeNumber, int coordinateSize, float[] data, BufferUsage usage = BufferUsage.StaticDraw)
-        {
-            // VBO 생성
-            uint vboID = Gl.GenBuffer();
+            if (_texCoords != null)
+            {
+                texcoords = new float[_texCoords.Length * 2];
+                for (int i = 0; i < _texCoords.Length; i++)
+                {
+                    texcoords[2 * i + 0] = _texCoords[i].x;
+                    texcoords[2 * i + 1] = _texCoords[i].y;
+                }
+                GpuLoader.StoreDataInAttributeList(1, 2, texcoords, BufferUsage.StaticDraw);
+            }
 
-            // VBO의 데이터를 CPU로부터 GPU에 복사할 때 사용하는 BindBuffer를 다음과 같이 사용
-            Gl.BindBuffer(BufferTarget.ArrayBuffer, vboID);
-            Gl.BufferData(BufferTarget.ArrayBuffer, (uint)(data.Length * sizeof(float)), data, usage);
+            if (_normals != null)
+            {
+                normals = new float[_normals.Length * 3];
+                for (int i = 0; i < _normals.Length; i++)
+                {
+                    normals[3 * i + 0] = _normals[i].x;
+                    normals[3 * i + 1] = _normals[i].y;
+                    normals[3 * i + 2] = _normals[i].z;
+                }
+                GpuLoader.StoreDataInAttributeList(2, 3, normals, BufferUsage.StaticDraw);
+            }
 
-            // 이전에 BindVertexArray한 VAO에 현재 Bind된 VBO를 attributeNumber 슬롯에 설정
-            Gl.VertexAttribPointer(attributeNumber, coordinateSize, VertexAttribType.Float, false, 0, IntPtr.Zero);
-            //Gl.VertexArrayVertexBuffer(glVertexArrayVertexBuffer, vboID, )
+            if (_colors != null)
+            {
+                colors = new float[_colors.Length * 3];
+                for (int i = 0; i < _colors.Length; i++)
+                {
+                    colors[3 * i + 0] = _colors[i].x;
+                    colors[3 * i + 1] = _colors[i].y;
+                    colors[3 * i + 2] = _colors[i].z;
+                }
+                GpuLoader.StoreDataInAttributeList(3, 3, colors, BufferUsage.StaticDraw);
+            }
 
-            // GPU 메모리 조작이 필요 없다면 다음과 같이 바인딩 해제
-            Gl.BindBuffer(BufferTarget.ArrayBuffer, 0);
 
-            return vboID;
+            if (_boneIndex != null)
+            {
+                boneIndices = new uint[_boneIndex.Length * 4];
+                for (int i = 0; i < _boneIndex.Length; i++)
+                {
+                    boneIndices[4 * i + 0] = (uint)_boneIndex[i].x;
+                    boneIndices[4 * i + 1] = (uint)_boneIndex[i].y;
+                    boneIndices[4 * i + 2] = (uint)_boneIndex[i].z;
+                    boneIndices[4 * i + 3] = (uint)_boneIndex[i].w;
+                }
+                GpuLoader.StoreDataInAttributeList(4, 4, boneIndices, BufferUsage.StaticDraw);
+            }
+
+            if (_boneWeight != null)
+            {
+                boneWeights = new float[_boneWeight.Length * 4];
+                for (int i = 0; i < _boneWeight.Length; i++)
+                {
+                    boneWeights[4 * i + 0] = _boneWeight[i].x;
+                    boneWeights[4 * i + 1] = _boneWeight[i].y;
+                    boneWeights[4 * i + 2] = _boneWeight[i].z;
+                    boneWeights[4 * i + 3] = _boneWeight[i].w;
+                }
+                GpuLoader.StoreDataInAttributeList(5, 4, boneWeights, BufferUsage.StaticDraw);
+            }
+
+            Gl.BindVertexArray(0);
         }
 
     }

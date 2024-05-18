@@ -2,20 +2,17 @@
 {
     public class TexturedModel : RawModel3d
     {
-        private Texture _texture;
+        Texture _texture;
 
-        public Texture Texture
-        {
-            get => _texture;
-        }
+        public Texture Texture => _texture;
 
-        public TexturedModel(RawModel3d model, Texture texture) :
-            base(model.VAO, model.Vertices)
+        public bool IsTextured => _texture != null;
+
+        public TexturedModel(RawModel3d model, Texture texture) : base()
         {
-            if (texture != null)
-            {
-                _texture = texture;
-            }
+            _texture = texture;
+            Init(model.Vertices, model.TexCoords, model.Normals, model.Colors, model.BoneIndices, model.BoneWeights);
+            GpuBind();
         }
     }
 }

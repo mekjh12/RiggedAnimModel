@@ -43,5 +43,13 @@ namespace LSystem.Animate
                 _texcoords.Add(values[i]);
             }
         }
+
+        public void AddNormals(params uint[] values)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                _normals.Add(values[i]);
+            }
+        }
     }
 }

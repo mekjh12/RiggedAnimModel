@@ -1,13 +1,7 @@
-﻿using Assimp;
-using OpenGL;
+﻿using OpenGL;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
-using static Assimp.Metadata;
 
 namespace LSystem.Animate
 {
@@ -56,7 +50,6 @@ namespace LSystem.Animate
                 if (_headEntity != null)
                     Remove(_headEntity.Name);
             }
-
         }
 
         public void Attach(BODY_PART hand, Entity entity)
@@ -158,23 +151,23 @@ namespace LSystem.Animate
         }
 
         /// <summary>
-        /// 
+        /// 눈을 이식한다.
         /// </summary>
         /// <param name="fileName"></param>
         /// <param name="parentBoneName"></param>
         private void TransplantEye(string fileName, string parentBoneName)
         {
-            if (File.Exists(fileName))
+            if (!File.Exists(fileName))
             {
                 Console.WriteLine($"{fileName}이 없어 눈 이식에 실패하였습니다.");
                 return;
             }
 
-            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fileName);
+            TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(fileName);
             string boneName = $"mixamorig_eyeLeft";
             Bone LEyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName,
                 inverseBindTransform: Matrix4x4f.RotatedY(90).Inverse,
-                localBindTransform: Matrix4x4f.Translated(4.2f, 11.8f, 13.5f) * Matrix4x4f.Scaled(0.5f, 0.5f, 0.5f));
+                localBindTransform: Matrix4x4f.Translated(4.4f, 11.8f, 12.5f) * Matrix4x4f.Scaled(0.75f, 0.65f, 0.65f));
             LEyeBone.RestrictAngle = new BoneAngle(-30, 30, -0, 0, -60, 60);
             Entity EntityL = new Entity(boneName, texturedModel);
             EntityL.IsOnlyOneJointWeight = true;
@@ -184,7 +177,7 @@ namespace LSystem.Animate
             boneName = $"mixamorig_eyeRight";
             Bone REyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName,
                 inverseBindTransform: Matrix4x4f.RotatedY(90).Inverse,
-                localBindTransform: Matrix4x4f.Translated(-4.2f, 11.8f, 13.5f) * Matrix4x4f.Scaled(0.5f, 0.5f, 0.5f));
+                localBindTransform: Matrix4x4f.Translated(-4.4f, 11.8f, 12.5f) * Matrix4x4f.Scaled(0.75f, 0.65f, 0.65f));
             REyeBone.RestrictAngle = new BoneAngle(-30, 30, -0, 0, -60, 60);
             Entity EntityR = new Entity(boneName, texturedModel);
             EntityR.IsOnlyOneJointWeight = true;

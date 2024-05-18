@@ -8,8 +8,6 @@ namespace LSystem
     public class Renderer
     {
         public static RawModel3d Line = Loader3d.LoadLine(0, 0, 0, 1, 0, 0);
-        public static RawModel3d Cube = Loader3d.LoadCube();
-        public static RawModel3d Cone = Loader3d.LoadCone(4, 1.0f, 3.0f, false);
         public static RawModel3d Sphere = Loader3d.LoadSphere(r: 1, piece: 6);
         public static RawModel3d Rect = Loader3d.LoadPlane();
         public static RawModel3d Axis = Loader3d.LoadAxis(1);
@@ -137,11 +135,11 @@ namespace LSystem
 
         }
 
-        public static void Render(BoneWeightShader shader, int boneIndex, Entity entity, Camera camera)
+        public static void Render(BoneWeightShader shader, int boneIndex, Matrix4x4f bindShapeMatrix, Entity entity, Camera camera)
         {
             shader.Bind();
 
-            shader.LoadModelMatrix(entity.ModelMatrix);
+            shader.LoadModelMatrix(entity.ModelMatrix * bindShapeMatrix);
             shader.LoadViewMatrix(camera.ViewMatrix);
             shader.LoadProjMatrix(camera.ProjectiveMatrix);
             shader.LoadBoneIndex(boneIndex);
@@ -197,8 +195,8 @@ namespace LSystem
                 Gl.EnableVertexAttribArray(0);
                 Gl.EnableVertexAttribArray(1);
                 Gl.EnableVertexAttribArray(2);
-                Gl.EnableVertexAttribArray(3);
                 Gl.EnableVertexAttribArray(4);
+                Gl.EnableVertexAttribArray(5);
 
                 TexturedModel modelTextured = (TexturedModel)(model);
 

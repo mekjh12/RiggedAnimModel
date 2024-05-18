@@ -3,17 +3,13 @@ using OpenGL;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 
 namespace LSystem.Animate
 {
     internal class XmlLoader
     {
-
-        public static TexturedModel LoadFileOnly(string filename)
+        public static TexturedModel LoadOnlyGeometryMesh(string filename)
         {
             XmlDocument xml = new XmlDocument();
             xml.Load(filename);
@@ -24,49 +20,30 @@ namespace LSystem.Animate
             Dictionary<string, string> effectToImage = XmlLoader.LoadEffect(xml);
 
             // (2) library_geometries = position, normal, texcoord, color
-            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord);
+            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals);
 
             // 읽어온 정보의 인덱스를 이용하여 GPU에 데이터를 전송한다.
             List<TexturedModel> texturedModels = new List<TexturedModel>();
             foreach (MeshTriangles meshTriangles in meshes)
             {
                 int count = meshTriangles.Vertices.Count;
-                float[] postions = new float[count * 3];
-                float[] texcoords = new float[count * 2];
-                uint[] boneIndices = new uint[count * 4];
-                float[] boneWeights = new float[count * 4];
+                
+                List<Vertex3f> lstVertices = new List<Vertex3f>();
+                List<Vertex2f> lstTexs = new List<Vertex2f>();
+
                 for (int i = 0; i < count; i++)
                 {
                     int idx = (int)meshTriangles.Vertices[i];
                     int tidx = (int)meshTriangles.Texcoords[i];
-                    postions[3 * i + 0] = lstPositions[idx].x;
-                    postions[3 * i + 1] = lstPositions[idx].y;
-                    postions[3 * i + 2] = lstPositions[idx].z;
-
-                    texcoords[2 * i + 0] = lstTexCoord[tidx].x;
-                    texcoords[2 * i + 1] = lstTexCoord[tidx].y;
-                }
-
-                // 로딩한 postions, boneIndices, boneWeights를 버텍스로
-                List<Vertex3f> _vertices = new List<Vertex3f>();
-                List<Vertex4f> _boneIndices = new List<Vertex4f>();
-                List<Vertex4f> _boneWeights = new List<Vertex4f>();
-                int vertexNum = postions.Length / 3;
-                for (int i = 0; i < vertexNum; i++)
-                {
-                    _vertices.Add(new Vertex3f(postions[i * 3 + 0], postions[i * 3 + 1], postions[i * 3 + 2]));
-                    _boneIndices.Add(new Vertex4f(boneIndices[i * 4 + 0], boneIndices[i * 4 + 1], boneIndices[i * 4 + 2], boneIndices[i * 4 + 3]));
-                    _boneWeights.Add(new Vertex4f(boneWeights[i * 4 + 0], boneWeights[i * 4 + 1], boneWeights[i * 4 + 2], boneWeights[i * 4 + 3]));
+                    lstVertices.Add(lstPositions[idx]);
+                    lstTexs.Add(lstTexCoord[tidx]);
                 }
 
                 // VAO, VBO로 Raw3d 모델을 만든다.
                 uint vao = Gl.GenVertexArray();
-                Gl.BindVertexArray(vao);
-                GpuLoader.StoreDataInAttributeList(0, 3, postions, BufferUsage.StaticDraw);
-                GpuLoader.StoreDataInAttributeList(1, 2, texcoords, BufferUsage.StaticDraw);
-                //GpuLoader.BindIndicesBuffer(lstVertexIndices.ToArray());
-                Gl.BindVertexArray(0);
-                RawModel3d _rawModel = new RawModel3d(vao, postions);
+                RawModel3d _rawModel = new RawModel3d();
+                _rawModel.Init(vertices: lstVertices.ToArray(), texCoords: lstTexs.ToArray());
+                _rawModel.GpuBind();
 
                 if (meshTriangles.Material == "")
                 {
@@ -217,14 +194,17 @@ namespace LSystem.Animate
             return effects;
         }
 
-        public static List<MeshTriangles> LibraryGeometris(XmlDocument xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord)
+        public static List<MeshTriangles> LibraryGeometris(XmlDocument xml, 
+            out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals)
         {
             List<MeshTriangles> meshTriangles = new List<MeshTriangles>();
 
             List<uint> lstVertexIndices = new List<uint>();
             List<uint> texcoordIndices = new List<uint>();
+            List<uint> lstNormalIndices = new List<uint>();
             lstPositions = new List<Vertex3f>();
             lstTexCoord = new List<Vertex2f>();
+            lstNormals = new List<Vertex3f>();
 
             XmlNodeList libraryGeometries = xml.GetElementsByTagName("library_geometries");
 
@@ -269,6 +249,10 @@ namespace LSystem.Animate
                         }
                         else if ("#" + sourcesId == normalName)
                         {
+                            for (int i = 0; i < items.Length; i += 3)
+                            {
+                                lstNormals.Add(new Vertex3f(items[i], items[i + 1], items[i + 2]));
+                            }
                         }
                         else if ("#" + sourcesId == colorName)
                         {
@@ -321,7 +305,7 @@ namespace LSystem.Animate
                         for (int i = 0; i < values.Length; i += total)
                         {
                             if (vertexOffset >= 0) lstVertexIndices.Add(uint.Parse(values[i + vertexOffset]));
-                            //if (normalOffset >= 0) normalIndices.Add(uint.Parse(values[i + normalOffset]));
+                            if (normalOffset >= 0) lstNormalIndices.Add(uint.Parse(values[i + normalOffset]));
                             if (texcoordOffset >= 0) texcoordIndices.Add(uint.Parse(values[i + texcoordOffset]));
                             //if (colorOffset >= 0) colorIndices.Add(uint.Parse(values[i + colorOffset]));
                         }
@@ -332,6 +316,7 @@ namespace LSystem.Animate
                         tri.Material = materialName;
                         tri.AddVertices(lstVertexIndices.ToArray());
                         tri.AddTexCoords(texcoordIndices.ToArray());
+                        tri.AddNormals(lstNormalIndices.ToArray());
                         meshTriangles.Add(tri);
                     }
                 }

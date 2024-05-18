@@ -33,15 +33,14 @@ namespace LSystem
         Vertex3f _centerPoint = new Vertex3f(0.0f, 0.0f, 0.0f);
         float _theta = 0.0f;
 
-        Vertex3f _bgColor = new Vertex3f(0.1f, 0.1f, 0.9f);
+        Vertex3f _bgColor = new Vertex3f(0.1f, 0.1f, 0.1f);
 
         CTrackBar trFov;
         CTrackBar trAxisLength;
         CTrackBar trAxisThick;
 
+        Dictionary<string, Entity> _items = new Dictionary<string, Entity>();
 
-
-        public static float _rot = 0.0f;
 
         public Form3D()
         {
@@ -66,6 +65,7 @@ namespace LSystem
 
         private void Form3D_Load(object sender, EventArgs e)
         {
+
             // ### 초기화 ###
             IniFile.SetFileName("setup.ini");
 
@@ -274,7 +274,7 @@ namespace LSystem
                 _humanAniModel.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked,
                     isBoneParentCurrentVisible: this.ckBoneParentCurrentVisible.Checked, 
                     boneName: this.cbBone.Text);
-                //_aniModel1.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
+                //_humanAniModel.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
 
                 if (camera is OrbitCamera)
                 {
@@ -667,13 +667,6 @@ namespace LSystem
 
         private void button19_Click(object sender, EventArgs e)
         {
-            string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\sword1.dae";
-            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fileName);
-            Entity entity1 = new Entity(Path.GetFileNameWithoutExtension(fileName) + "1", texturedModel);
-            Entity entity2 = new Entity(Path.GetFileNameWithoutExtension(fileName) + "2", texturedModel);
-            entity1.BindTransform(sx:13, sy:3, sz:13, roty:90, y:2);
-            _humanAniModel.Attach(Mammal.BODY_PART.LeftHand, entity1);
-            _humanAniModel.Attach(Mammal.BODY_PART.RightHand, entity2);
             _humanAniModel.FoldHand(Mammal.BODY_PART.LeftHand);
             _humanAniModel.FoldHand(Mammal.BODY_PART.RightHand);
         }
@@ -682,14 +675,12 @@ namespace LSystem
         {
             _humanAniModel.UnfoldHand(Mammal.BODY_PART.LeftHand);
             _humanAniModel.UnfoldHand(Mammal.BODY_PART.RightHand);
-            _humanAniModel.RemoveItem(Mammal.BODY_PART.LeftHand);
-            _humanAniModel.RemoveItem(Mammal.BODY_PART.RightHand);
         }
 
         private void button22_Click(object sender, EventArgs e)
         {
             string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\Merchant_Hat.dae";
-            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fileName);            
+            TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(fileName);            
             Entity entity1 = new Entity(Path.GetFileNameWithoutExtension(fileName), texturedModel);
             entity1.BindTransform(sx:135, sy:135, sz:135);
             _humanAniModel.Attach(Mammal.BODY_PART.Head, entity1);
@@ -698,7 +689,7 @@ namespace LSystem
         private void button23_Click(object sender, EventArgs e)
         {
             string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\lamp.dae";
-            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fileName);
+            TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(fileName);
             Entity entity1 = new Entity(Path.GetFileNameWithoutExtension(fileName), texturedModel);
             entity1.BindTransform(roty: 180, rotz: -90, sx: 5, sy: 5, sz: 5);
             _humanAniModel.Attach(Mammal.BODY_PART.LeftHand, entity1);
@@ -732,7 +723,6 @@ namespace LSystem
 
         }
 
-        Dictionary<string, Entity> _items = new Dictionary<string, Entity>();
 
         public void LoadItemEntity(string directory)
         {
@@ -740,7 +730,7 @@ namespace LSystem
             {
                 if (Path.GetExtension(fn) == ".dae")
                 {
-                    TexturedModel texturedModel = XmlLoader.LoadFileOnly(fn);
+                    TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(fn);
                     Entity entity = new Entity(Path.GetFileNameWithoutExtension(fn), texturedModel);
 
                     string fileNameBind = fn.Replace(".dae", "_bind.txt");
@@ -1038,10 +1028,9 @@ namespace LSystem
 
         private void button12_Click_3(object sender, EventArgs e)
         {
-            string fn = EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\Merchant_Torso.dae";
-            TexturedModel texturedModel = XmlLoader.LoadFileOnly(fn);
-            Entity entity = new Entity(Path.GetFileNameWithoutExtension(fn), texturedModel);
-            _humanAniModel.Attach(Mammal.BODY_PART.LeftHand, entity);
+            string fn = EngineLoop.PROJECT_PATH + "\\Res\\Items\\Maguganjigi_Upper.dae";
+            TexturedModel texturedModel = Clothes.WearAssignWeightTransfer(xmlDae.BodyWeightModels, fn);
+            _humanAniModel.Attach("Maguganjigi_Upper", texturedModel);
         }
     }
 }
