@@ -7,7 +7,7 @@ using System.Xml;
 
 namespace LSystem.Animate
 {
-    internal class XmlLoader
+    internal class AniXmlLoader
     {
         public static TexturedModel LoadOnlyGeometryMesh(string filename)
         {
@@ -15,12 +15,12 @@ namespace LSystem.Animate
             xml.Load(filename);
 
             // (1) library_images = textures
-            Dictionary<string, Texture> textures = XmlLoader.LibraryImages(filename, xml);
-            Dictionary<string, string> materialToEffect = XmlLoader.LoadMaterials(xml);
-            Dictionary<string, string> effectToImage = XmlLoader.LoadEffect(xml);
+            Dictionary<string, Texture> textures = AniXmlLoader.LibraryImages(filename, xml);
+            Dictionary<string, string> materialToEffect = AniXmlLoader.LoadMaterials(xml);
+            Dictionary<string, string> effectToImage = AniXmlLoader.LoadEffect(xml);
 
             // (2) library_geometries = position, normal, texcoord, color
-            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals);
+            List<MeshTriangles> meshes = AniXmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals);
 
             // 읽어온 정보의 인덱스를 이용하여 GPU에 데이터를 전송한다.
             List<TexturedModel> texturedModels = new List<TexturedModel>();
@@ -30,19 +30,20 @@ namespace LSystem.Animate
                 
                 List<Vertex3f> lstVertices = new List<Vertex3f>();
                 List<Vertex2f> lstTexs = new List<Vertex2f>();
+                List<Vertex3f> lstNors = new List<Vertex3f>();
 
                 for (int i = 0; i < count; i++)
                 {
                     int idx = (int)meshTriangles.Vertices[i];
                     int tidx = (int)meshTriangles.Texcoords[i];
+                    int nidx = (int)meshTriangles.Normals[i];
                     lstVertices.Add(lstPositions[idx]);
                     lstTexs.Add(lstTexCoord[tidx]);
+                    lstNors.Add(lstNormals[nidx]);
                 }
 
-                // VAO, VBO로 Raw3d 모델을 만든다.
-                uint vao = Gl.GenVertexArray();
                 RawModel3d _rawModel = new RawModel3d();
-                _rawModel.Init(vertices: lstVertices.ToArray(), texCoords: lstTexs.ToArray());
+                _rawModel.Init(vertices: lstVertices.ToArray(), texCoords: lstTexs.ToArray(), normals: lstNors.ToArray());
                 _rawModel.GpuBind();
 
                 if (meshTriangles.Material == "")
@@ -55,7 +56,7 @@ namespace LSystem.Animate
                 {
                     string effect = materialToEffect[meshTriangles.Material].Replace("#", "");
                     string imageName = (effectToImage[effect]);
-
+                    Console.WriteLine(imageName);
                     if (textures.ContainsKey(imageName))
                     {
                         TexturedModel texturedModel = new TexturedModel(_rawModel, textures[imageName]);
@@ -236,8 +237,7 @@ namespace LSystem.Animate
                         {
                             for (int i = 0; i < items.Length; i += 3)
                             {
-                                Vertex3f pos = new Vertex3f(items[i], items[i + 1], items[i + 2]);
-                                lstPositions.Add(pos);
+                                lstPositions.Add(new Vertex3f(items[i], items[i + 1], items[i + 2]));
                             }
                         }
                         else if ("#" + sourcesId == texcoordName)
@@ -528,7 +528,7 @@ namespace LSystem.Animate
         /// <param name="xmlDae"></param>
         /// <param name="xml"></param>
         /// <param name="motionName"></param>
-        public static void LoadMixamoMotion(XmlDae xmlDae, XmlDocument xml, string motionName)
+        public static void LoadMixamoMotion(AniDae xmlDae, XmlDocument xml, string motionName)
         {
             XmlNodeList libraryAnimations = xml.GetElementsByTagName("library_animations");
             if (libraryAnimations.Count == 0)
@@ -650,7 +650,7 @@ namespace LSystem.Animate
                         Vertex3f position = bone.IsRootArmature ?
                             mat.Position * xmlDae.HipHeightScale : bone.PivotPosition;
 
-                        Quaternion q = XmlLoader.ToQuaternion(mat);
+                        Quaternion q = AniXmlLoader.ToQuaternion(mat);
                         q.Normalize();
 
                         BonePose bonePose = new BonePose(position, q);
@@ -662,7 +662,7 @@ namespace LSystem.Animate
             xmlDae.Motions.AddMotion(motionName, motion);
         }
 
-        public static void LibraryAnimations(XmlDae xmlDae, XmlDocument xml)
+        public static void LibraryAnimations(AniDae xmlDae, XmlDocument xml)
         {
             XmlNodeList libraryAnimations = xml.GetElementsByTagName("library_animations");
             if (libraryAnimations.Count == 0)

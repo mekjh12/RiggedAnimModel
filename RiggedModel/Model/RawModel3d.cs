@@ -5,6 +5,11 @@ namespace LSystem
 {
     public class RawModel3d
     {
+        public enum UNIFORM_LOCATION_ATRRIBUTE_NUMBER
+        {
+            VERTEX = 0, TEXCOORD = 1, NORMAL = 2, COLOR = 3, BONEINDEX = 4, BONEWEIGHT = 5
+        }
+
         uint _vbo;
         uint _ibo;
         uint _vao;
@@ -12,6 +17,8 @@ namespace LSystem
         public uint VAO => _vao;
 
         bool _isDrawElement;
+
+        bool _isCpuStored;
 
         public bool IsDrawElement
         {
@@ -48,12 +55,27 @@ namespace LSystem
 
         public Vertex4f[] BoneWeights => _boneWeight;
 
-        public RawModel3d(bool isDrawElement = false)// Vertex3f[] vertices, Vertex2f[] texCoords = null, Vertex3f[] normals = null, Vertex4i[] boneIndex = null, Vertex4f[] boneWeight = null)
+        /// <summary>
+        /// 생성자
+        /// </summary>
+        /// <param name="isDrawElement"></param>
+        /// <param name="isCpuStored"></param>
+        public RawModel3d(bool isCpuStored = true, bool isDrawElement = false)
         {
             _vao = Gl.GenVertexArray();
             _isDrawElement = false;
+            _isCpuStored = isCpuStored;
         }
 
+        /// <summary>
+        /// 데이터를 클래스에 보관한다. 아직 GPU에는 올리지 않는다.
+        /// </summary>
+        /// <param name="vertices"></param>
+        /// <param name="texCoords"></param>
+        /// <param name="normals"></param>
+        /// <param name="colors"></param>
+        /// <param name="boneIndex"></param>
+        /// <param name="boneWeight"></param>
         public void Init(Vertex3f[] vertices = null, Vertex2f[] texCoords = null, Vertex3f[] normals = null, Vertex3f[] colors = null,
             Vertex4i[] boneIndex = null, Vertex4f[] boneWeight = null)
         {
@@ -115,10 +137,11 @@ namespace LSystem
         }
 
         /// <summary>
-        /// 
+        /// GPU에 데이터를 전송하여 메모리에 올린다.
         /// </summary>
         public void GpuBind()
         {
+            // 이전에 바인딩한 이력이 있으면 gpu에서 지운다.
             if (_vao >= 0) Clean();
 
             float[] postions;
@@ -140,7 +163,8 @@ namespace LSystem
                     postions[3 * i + 1] = _vertices[i].y;
                     postions[3 * i + 2] = _vertices[i].z;
                 }
-                GpuLoader.StoreDataInAttributeList(0, 3, postions, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(UNIFORM_LOCATION_ATRRIBUTE_NUMBER.VERTEX, 3, postions, BufferUsage.StaticDraw);
+                if (!_isCpuStored) _vertices = null;
             }
 
             if (_texCoords != null)
@@ -151,7 +175,8 @@ namespace LSystem
                     texcoords[2 * i + 0] = _texCoords[i].x;
                     texcoords[2 * i + 1] = _texCoords[i].y;
                 }
-                GpuLoader.StoreDataInAttributeList(1, 2, texcoords, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(UNIFORM_LOCATION_ATRRIBUTE_NUMBER.TEXCOORD, 2, texcoords, BufferUsage.StaticDraw);
+                if (!_isCpuStored) _texCoords = null;
             }
 
             if (_normals != null)
@@ -163,7 +188,8 @@ namespace LSystem
                     normals[3 * i + 1] = _normals[i].y;
                     normals[3 * i + 2] = _normals[i].z;
                 }
-                GpuLoader.StoreDataInAttributeList(2, 3, normals, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(UNIFORM_LOCATION_ATRRIBUTE_NUMBER.NORMAL, 3, normals, BufferUsage.StaticDraw);
+                if (!_isCpuStored) _normals = null;
             }
 
             if (_colors != null)
@@ -175,9 +201,9 @@ namespace LSystem
                     colors[3 * i + 1] = _colors[i].y;
                     colors[3 * i + 2] = _colors[i].z;
                 }
-                GpuLoader.StoreDataInAttributeList(3, 3, colors, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(UNIFORM_LOCATION_ATRRIBUTE_NUMBER.COLOR, 3, colors, BufferUsage.StaticDraw);
+                if (!_isCpuStored) _colors = null;
             }
-
 
             if (_boneIndex != null)
             {
@@ -189,7 +215,8 @@ namespace LSystem
                     boneIndices[4 * i + 2] = (uint)_boneIndex[i].z;
                     boneIndices[4 * i + 3] = (uint)_boneIndex[i].w;
                 }
-                GpuLoader.StoreDataInAttributeList(4, 4, boneIndices, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(UNIFORM_LOCATION_ATRRIBUTE_NUMBER.BONEINDEX, 4, boneIndices, BufferUsage.StaticDraw);
+                if (!_isCpuStored) _boneIndex = null;
             }
 
             if (_boneWeight != null)
@@ -202,7 +229,8 @@ namespace LSystem
                     boneWeights[4 * i + 2] = _boneWeight[i].z;
                     boneWeights[4 * i + 3] = _boneWeight[i].w;
                 }
-                GpuLoader.StoreDataInAttributeList(5, 4, boneWeights, BufferUsage.StaticDraw);
+                GpuLoader.StoreDataInAttributeList(UNIFORM_LOCATION_ATRRIBUTE_NUMBER.BONEWEIGHT, 4, boneWeights, BufferUsage.StaticDraw);
+                if (!_isCpuStored) _boneWeight = null;
             }
 
             Gl.BindVertexArray(0);

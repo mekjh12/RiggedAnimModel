@@ -8,7 +8,7 @@ namespace LSystem.Animate
     class AniModel
     {
         protected string _name;
-        protected XmlDae _xmlDae;
+        protected AniDae _xmlDae;
 
         protected Action _updateBefore;
         protected Action _updateAfter;
@@ -98,7 +98,7 @@ namespace LSystem.Animate
         /// </summary>
         /// <param name="model"></param>
         /// <param name="xmlDae"></param>
-        public AniModel(string name, Entity model, XmlDae xmlDae)
+        public AniModel(string name, Entity model, AniDae xmlDae)
         {
             _models = new Dictionary<string, Entity>();
             _models.Add(name, model);
@@ -150,7 +150,7 @@ namespace LSystem.Animate
             }
         }
 
-        public void Render(Camera camera, StaticShader staticShader, AnimateShader ashader, BoneWeightShader boneWeightShader,
+        public void Render(Camera camera, DirectionLight light, StaticShader staticShader, AnimateShader ashader, BoneWeightShader boneWeightShader,
             bool isSkinVisible = true, bool isBoneVisible = false, bool isBoneParentCurrentVisible = false, string boneName = "")
         {
             Matrix4x4f[] jointMatrix = JointTransformMatrix;
@@ -167,7 +167,7 @@ namespace LSystem.Animate
                     Gl.Disable(EnableCap.CullFace);
                     if (_renderingMode == RenderingMode.Animation)
                     {
-                        Renderer.Render(ashader, _transform.Matrix4x4f, jointMatrix, entity, camera);
+                        Renderer.Render(ashader, _transform.Matrix4x4f, jointMatrix, entity, camera, light);
                     }
                     else if (_renderingMode == RenderingMode.BoneWeight)
                     {

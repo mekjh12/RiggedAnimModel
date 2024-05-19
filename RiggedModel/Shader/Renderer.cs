@@ -79,8 +79,6 @@ namespace LSystem
 
         }
 
-
-
         public static void RenderAxis(StaticShader shader, Camera camera)
         {
             Gl.Disable(EnableCap.DepthTest);
@@ -171,7 +169,7 @@ namespace LSystem
         }
 
         public static void Render(AnimateShader shader, Matrix4x4f bindShapeMatrix,
-            Matrix4x4f[] jointTransforms, Entity entity, Camera camera)
+            Matrix4x4f[] jointTransforms, Entity entity, Camera camera, DirectionLight light)
         {
             if (entity == null) return;
 
@@ -182,6 +180,7 @@ namespace LSystem
             shader.LoadModelMatrix(bindShapeMatrix * entity.ModelMatrix);
             shader.LoadViewMatrix(camera.ViewMatrix);
             shader.LoadProjMatrix(camera.ProjectiveMatrix);
+            shader.LoadLight(light.Direction);
 
             shader.LoadIsOnlyOneJointWeight(entity.IsOnlyOneJointWeight);
             shader.LoadJointIndex(entity.BoneIndexOnlyOneJoint);

@@ -18,7 +18,7 @@ namespace LSystem.Animate
 
         public Entity LeftHandEntity => _leftHandEntity;
 
-        public Mammal(string name, Entity model, XmlDae xmlDae) : base(name, model, xmlDae)
+        public Mammal(string name, Entity model, AniDae xmlDae) : base(name, model, xmlDae)
         {
             TransplantEye(EngineLoop.PROJECT_PATH + "\\Res\\Human\\simple_eye.dae", "mixamorig_Head");
 
@@ -163,7 +163,7 @@ namespace LSystem.Animate
                 return;
             }
 
-            TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(fileName);
+            TexturedModel texturedModel = AniXmlLoader.LoadOnlyGeometryMesh(fileName);
             string boneName = $"mixamorig_eyeLeft";
             Bone LEyeBone = _xmlDae.AddBone(boneName, _xmlDae.BoneCount, parentBoneName,
                 inverseBindTransform: Matrix4x4f.RotatedY(90).Inverse,
@@ -194,7 +194,7 @@ namespace LSystem.Animate
         /// <param name="bindTransform"> 캐릭터 공간의 invBind를 위하여 역행렬이 아닌 바인딩행렬을 지정한다.</param>
         /// <param name="localBindTransform">부모뼈공간에서의 바인딩 행렬을 지정한다.</param>
         /// <returns></returns>
-        private Bone HandGrabItem(XmlDae xmlDae, string boneName, string parentBoneName, Matrix4x4f bindTransform, Matrix4x4f localBindTransform)
+        private Bone HandGrabItem(AniDae xmlDae, string boneName, string parentBoneName, Matrix4x4f bindTransform, Matrix4x4f localBindTransform)
         {
             Bone bone = xmlDae.AddBone(boneName, xmlDae.BoneCount, parentBoneName,
                 inverseBindTransform: bindTransform.Inverse,

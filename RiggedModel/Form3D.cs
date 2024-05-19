@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Windows.Media.Media3D;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -19,10 +20,11 @@ namespace LSystem
         StaticShader _shader;
         AnimateShader _ashader;
         BoneWeightShader _bwShader;
+        DirectionLight _directionLight;
 
         HumanAniModel _humanAniModel;
         AniModel _selectedAniModel;
-        XmlDae xmlDae;
+        AniDae xmlDae;
 
         bool _isDraged = false;
         bool _isShifted = false;
@@ -104,7 +106,7 @@ namespace LSystem
 
             if (this.cbCharacter.Items.Count > 0)
             {
-                xmlDae = new XmlDae(EngineLoop.PROJECT_PATH + $"\\Res\\{cbCharacter.Items[0]}", isLoadAnimation: false);
+                xmlDae = new AniDae(EngineLoop.PROJECT_PATH + $"\\Res\\{cbCharacter.Items[0]}", isLoadAnimation: false);
                 //xmlDae.AddAction(EngineLoop.PROJECT_PATH + "\\Res\\Action\\Interpolation Pose.dae");
 
                 Entity daeEntity = new Entity("aniModel", xmlDae.Models.ToArray());
@@ -119,8 +121,11 @@ namespace LSystem
                 //this.cbAction.Text = (string)this.cbAction.Items[0];
             }
 
+            // 아이템 읽기
             LoadItemEntity(EngineLoop.PROJECT_PATH + "\\Res\\Items\\");
 
+            // 광원
+            _directionLight = new DirectionLight(new Vertex3f(0, -1, 1), new Vertex3f(1, 1, 1));
 
             // 설정 읽어오기
             // -------------------------------------------------------------------------------------------------------
@@ -210,7 +215,7 @@ namespace LSystem
 
                 _humanAniModel.Update(deltaTime);
                 //_aniModel1.Update(deltaTime);
-                
+
                 if (_isIkApply)
                 {
                     Bone boneEnd = _humanAniModel.GetBoneByName(this.cbBone.Text);
@@ -271,7 +276,7 @@ namespace LSystem
                     Renderer.Render(_shader, entity, camera);
                 }
 
-                _humanAniModel.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked,
+                _humanAniModel.Render(camera, _directionLight, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked,
                     isBoneParentCurrentVisible: this.ckBoneParentCurrentVisible.Checked, 
                     boneName: this.cbBone.Text);
                 //_humanAniModel.Render(camera, _shader, _ashader, _bwShader, this.ckSkinVisible.Checked, this.ckBoneVisible.Checked);
@@ -485,7 +490,7 @@ namespace LSystem
 
         private void cbCharacter_SelectedIndexChanged(object sender, EventArgs e)
         {
-            xmlDae = new XmlDae(EngineLoop.PROJECT_PATH + $"\\Res\\{this.cbCharacter.Text}", isLoadAnimation: false);
+            xmlDae = new AniDae(EngineLoop.PROJECT_PATH + $"\\Res\\{this.cbCharacter.Text}", isLoadAnimation: false);
 
             // *** Action ***
             this.cbAction.Items.Clear();
@@ -496,7 +501,7 @@ namespace LSystem
                     XmlDocument xml = new XmlDocument();
                     xml.Load(fn);
                     string motionName = Path.GetFileNameWithoutExtension(fn);
-                    XmlLoader.LoadMixamoMotion(xmlDae, xml, motionName);
+                    AniXmlLoader.LoadMixamoMotion(xmlDae, xml, motionName);
                     this.cbAction.Items.Add(Path.GetFileNameWithoutExtension(fn));
                 }
             }
@@ -680,7 +685,7 @@ namespace LSystem
         private void button22_Click(object sender, EventArgs e)
         {
             string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\Merchant_Hat.dae";
-            TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(fileName);            
+            TexturedModel texturedModel = AniXmlLoader.LoadOnlyGeometryMesh(fileName);            
             Entity entity1 = new Entity(Path.GetFileNameWithoutExtension(fileName), texturedModel);
             entity1.BindTransform(sx:135, sy:135, sz:135);
             _humanAniModel.Attach(Mammal.BODY_PART.Head, entity1);
@@ -689,7 +694,7 @@ namespace LSystem
         private void button23_Click(object sender, EventArgs e)
         {
             string fileName = EngineLoop.PROJECT_PATH + "\\Res\\Items\\lamp.dae";
-            TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(fileName);
+            TexturedModel texturedModel = AniXmlLoader.LoadOnlyGeometryMesh(fileName);
             Entity entity1 = new Entity(Path.GetFileNameWithoutExtension(fileName), texturedModel);
             entity1.BindTransform(roty: 180, rotz: -90, sx: 5, sy: 5, sz: 5);
             _humanAniModel.Attach(Mammal.BODY_PART.LeftHand, entity1);
@@ -730,7 +735,7 @@ namespace LSystem
             {
                 if (Path.GetExtension(fn) == ".dae")
                 {
-                    TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(fn);
+                    TexturedModel texturedModel = AniXmlLoader.LoadOnlyGeometryMesh(fn);
                     Entity entity = new Entity(Path.GetFileNameWithoutExtension(fn), texturedModel);
 
                     string fileNameBind = fn.Replace(".dae", "_bind.txt");

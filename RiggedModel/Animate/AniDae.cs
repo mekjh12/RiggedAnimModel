@@ -6,12 +6,12 @@ using System.Xml;
 
 namespace LSystem.Animate
 {
-    public class XmlDae
+    public class AniDae
     {
         string _filename; // dae
         MotionStorage _motions;
         List<TexturedModel> _texturedModels;
-        List<TexturedModel> _bodyTexturedModel;
+        List<TexturedModel> _bodyTexturedModel; // 모델중에서 나체를 지정한다.
         Bone _rootBone;
         
         Dictionary<string, Bone> _dicBones;
@@ -62,7 +62,7 @@ namespace LSystem.Animate
         /// 생성자
         /// </summary>
         /// <param name="filename"></param>
-        public XmlDae(string filename, bool isLoadAnimation = true)
+        public AniDae(string filename, bool isLoadAnimation = true)
         {
             _filename = filename;
 
@@ -84,16 +84,16 @@ namespace LSystem.Animate
             _filename = fileName;
 
             // (1) library_images = textures
-            Dictionary<string, Texture> textures = XmlLoader.LibraryImages(_filename, xml);
-            Dictionary<string, string> materialToEffect = XmlLoader.LoadMaterials(xml);
-            Dictionary<string, string> effectToImage = XmlLoader.LoadEffect(xml);
+            Dictionary<string, Texture> textures = AniXmlLoader.LibraryImages(_filename, xml);
+            Dictionary<string, string> materialToEffect = AniXmlLoader.LoadMaterials(xml);
+            Dictionary<string, string> effectToImage = AniXmlLoader.LoadEffect(xml);
 
             // (2) library_geometries = position, normal, texcoord, color
-            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, 
+            List<MeshTriangles> meshes = AniXmlLoader.LibraryGeometris(xml, 
                 out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals);
 
             // (3) library_controllers = boneIndex, boneWeight, bindShapeMatrix
-            XmlLoader.LibraryController(xml, out List<string> clothBoneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
+            AniXmlLoader.LibraryController(xml, out List<string> clothBoneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
                 out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight,  out Matrix4x4f bindShapeMatrix);
             _bindShapeMatrix = bindShapeMatrix;
 
@@ -180,17 +180,17 @@ namespace LSystem.Animate
             _filename = filename;
 
             // (1) library_images = textures
-            Dictionary<string, Texture> textures = XmlLoader.LibraryImages(_filename, xml);
-            Dictionary<string, string> materialToEffect = XmlLoader.LoadMaterials(xml);
-            Dictionary<string, string> effectToImage = XmlLoader.LoadEffect(xml);
+            Dictionary<string, Texture> textures = AniXmlLoader.LibraryImages(_filename, xml);
+            Dictionary<string, string> materialToEffect = AniXmlLoader.LoadMaterials(xml);
+            Dictionary<string, string> effectToImage = AniXmlLoader.LoadEffect(xml);
 
             // (2) library_geometries = position, normal, texcoord, color
-            List<MeshTriangles> meshes = XmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, 
+            List<MeshTriangles> meshes = AniXmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, 
                 out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals);
 
             // (3) library_controllers = boneNames, InvBindPoses, boneIndex, boneWeight
             // invBindPoses는 계산할 수 있으므로 생략가능하다.
-            XmlLoader.LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
+            AniXmlLoader.LibraryController(xml, out List<string> boneNames, out Dictionary<string, Matrix4x4f> invBindPoses,
                     out List<Vertex4i> lstBoneIndex, out List<Vertex4f> lstBoneWeight, out Matrix4x4f bindShapeMatrix);
             _bindShapeMatrix = bindShapeMatrix;
 
@@ -204,10 +204,10 @@ namespace LSystem.Animate
             }
 
             // (4) library_animations
-            XmlLoader.LibraryAnimations(this, xml);
+            AniXmlLoader.LibraryAnimations(this, xml);
 
             // (5) library_visual_scenes = bone hierarchy + rootBone
-            _rootBone = XmlLoader.LibraryVisualScenes(xml, invBindPoses, _dicBoneIndex, out _dicBones);
+            _rootBone = AniXmlLoader.LibraryVisualScenes(xml, invBindPoses, _dicBoneIndex, out _dicBones);
 
             // (6) source positions으로부터 
             Matrix4x4f A0 = _rootBone.LocalBindTransform;
@@ -244,12 +244,18 @@ namespace LSystem.Animate
                 {
                     int idx = (int)meshTriangles.Vertices[i];
                     int tidx = (int)meshTriangles.Texcoords[i];
+                    int nidx = (int)meshTriangles.Normals[i];
+
                     positions[3 * i + 0] = lstPositions[idx].x;
                     positions[3 * i + 1] = lstPositions[idx].y;
                     positions[3 * i + 2] = lstPositions[idx].z;
 
                     texcoords[2 * i + 0] = lstTexCoord[tidx].x;
                     texcoords[2 * i + 1] = lstTexCoord[tidx].y;
+
+                    normals[3 * i + 0] = lstNormals[nidx].x;
+                    normals[3 * i + 1] = lstNormals[nidx].y;
+                    normals[3 * i + 2] = lstNormals[nidx].z;
 
                     boneIndices[4 * i + 0] = (uint)lstBoneIndex[idx].x;
                     boneIndices[4 * i + 1] = (uint)lstBoneIndex[idx].y;

@@ -22,8 +22,8 @@ namespace LSystem
             base.BindAttribute(0, "in_position");
             base.BindAttribute(1, "in_textureCoords");
             base.BindAttribute(2, "in_normal");
-            base.BindAttribute(3, "in_jointIndices");
-            base.BindAttribute(4, "in_weights");
+            base.BindAttribute(4, "in_jointIndices");
+            base.BindAttribute(5, "in_weights");
         }
 
         protected override void GetAllUniformLocations()
@@ -77,6 +77,11 @@ namespace LSystem
         public void LoadBindShapeMatrix(Matrix4x4f bindShapeMatrix)
         {
             base.LoadMatrix(_location["bind"], bindShapeMatrix);
+        }
+
+        public void LoadLight(Vertex3f lightDirection)
+        {
+            base.LoadVector(_location["lightDirection"], lightDirection);
         }
 
         /// <summary>

@@ -8,7 +8,7 @@ namespace LSystem.Animate
     {
         public static TexturedModel WearAssignWeightTransfer(List<TexturedModel> skinModels, string clothFileName)
         {
-            TexturedModel texturedModel = XmlLoader.LoadOnlyGeometryMesh(clothFileName);
+            TexturedModel texturedModel = AniXmlLoader.LoadOnlyGeometryMesh(clothFileName);
 
             foreach (TexturedModel skinModel in skinModels)
             {
@@ -179,14 +179,18 @@ namespace LSystem.Animate
             }
 
             // 단일화된 점 벡터리스트를 원본의 점벡터 리스트에 맵딕셔너리를 이용하여 반영한다.
+            Vertex3f[] outNormals = new Vertex3f[lstPositions.Count];
+
             for (uint i = 0; i < lstPositions.Count; i++)
             {
                 lstPositions[(int)i] = pList[(int)map[i]];
+                outNormals[(int)i] = normals[(int)map[i]];
             }
 
             int count = meshTriangles.Vertices.Count;
             List<Vertex3f> vertices = new List<Vertex3f>();
             List<Vertex2f> texcoords = new List<Vertex2f>();
+            List<Vertex3f> lstNormals = new List<Vertex3f>();
             List<Vertex4i> boneIndices = new List<Vertex4i>();
             List<Vertex4f> boneWeights = new List<Vertex4f>();
 
@@ -196,12 +200,14 @@ namespace LSystem.Animate
                 int tidx = (int)meshTriangles.Texcoords[i];
                 vertices.Add(lstPositions[idx]);
                 texcoords.Add(lstTexCoord[tidx]);
+                lstNormals.Add(outNormals[idx]);
                 boneIndices.Add(lstBoneIndex[idx]);
                 boneWeights.Add(lstBoneWeight[idx]);
             }
 
             RawModel3d _rawModel = new RawModel3d();
-            _rawModel.Init(vertices: vertices.ToArray(), texCoords: texcoords.ToArray(), boneIndex: boneIndices.ToArray(), boneWeight:boneWeights.ToArray());
+            _rawModel.Init(vertices: vertices.ToArray(), texCoords: texcoords.ToArray(), normals: lstNormals.ToArray(),
+                boneIndex: boneIndices.ToArray(), boneWeight: boneWeights.ToArray());
             _rawModel.GpuBind();
             return _rawModel;
         }

@@ -11,7 +11,7 @@ namespace LSystem.Animate
 {
     class HumanAniModel : Mammal
     {
-        public HumanAniModel(string name, Entity model, XmlDae xmlDae) : base(name, model, xmlDae)
+        public HumanAniModel(string name, Entity model, AniDae xmlDae) : base(name, model, xmlDae)
         {
            
         }

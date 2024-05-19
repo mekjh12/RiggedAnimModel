@@ -20,6 +20,8 @@ namespace LSystem.Animate
 
         public List<uint> Texcoords => _texcoords;
 
+        public List<uint> Normals => _normals;
+
         public MeshTriangles()
         {
             _vertices = new List<uint>();

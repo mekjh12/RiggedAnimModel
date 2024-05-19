@@ -7,10 +7,13 @@ in vec3 pass_normals;
 in vec4 pass_weights;
 
 uniform sampler2D diffuseMap;
+uniform vec3 lightDirection;
 
 void main(void)
 {
-	vec4 diffuseColour = texture(diffuseMap, pass_textureCoords);	
+	float factor = clamp(dot(lightDirection, pass_normals), 0, 1);
+	vec3 color = texture(diffuseMap, pass_textureCoords).xyz;
+	vec3 finalColor = factor * color + 0.3f * color;
+	vec4 diffuseColour = vec4(finalColor, 1.0f);	
 	out_colour = diffuseColour;
-	//out_colour = vec4(pass_weights.xyz, 1.0f); //vec4(1.0, 1.0, 0.0, 1.0);
 }

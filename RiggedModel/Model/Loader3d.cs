@@ -37,7 +37,7 @@ namespace LSystem
                 lstColors.Add(new Vertex3f(colors[i], colors[i + 1], colors[i + 2]));
             }
 
-            RawModel3d rawModel = new RawModel3d();
+            RawModel3d rawModel = new RawModel3d(isCpuStored: false);
             rawModel.Init(vertices: lstVertices.ToArray(), colors: lstColors.ToArray());
             rawModel.GpuBind();
             return rawModel;
@@ -53,7 +53,7 @@ namespace LSystem
                 lstVertices.Add(new Vertex3f(positions[i], positions[i + 1], positions[i + 2]));
             }
 
-            RawModel3d rawModel = new RawModel3d();
+            RawModel3d rawModel = new RawModel3d(isCpuStored: false);
             rawModel.Init(vertices: lstVertices.ToArray());
             rawModel.GpuBind();
             return rawModel;
@@ -123,7 +123,7 @@ namespace LSystem
             for (int i = 0; i < normals.Length; i += 3)
                 lstNormals.Add(new Vertex3f(normals[i], normals[i + 1], normals[i + 2]));
 
-            RawModel3d rawModel = new RawModel3d();
+            RawModel3d rawModel = new RawModel3d(isCpuStored: false);
             rawModel.Init(vertices: lstVertices.ToArray(), texCoords: lstTexCoords.ToArray(), normals: lstNormals.ToArray());
             rawModel.GpuBind();
             return rawModel;
@@ -243,7 +243,7 @@ namespace LSystem
             for (int i = 0; i < positions.Length; i += 3)
                 lstVertices.Add(new Vertex3f(positions[i], positions[i + 1], positions[i + 2]));
 
-            RawModel3d rawModel = new RawModel3d();
+            RawModel3d rawModel = new RawModel3d(isCpuStored: false);
             rawModel.Init(vertices: lstVertices.ToArray());
             rawModel.GpuBind();
             return rawModel;

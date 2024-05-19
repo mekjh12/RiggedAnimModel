@@ -18,7 +18,7 @@ uniform mat4 proj;
 uniform mat4 view;
 uniform mat4 model;
 uniform mat4 pmodel;
-
+uniform vec3 lightDirection;
 
 uniform bool isOnlyOneJointWeight;
 uniform int jointIndex;
@@ -31,11 +31,14 @@ void main(void)
 	if (isOnlyOneJointWeight)
 	{
 		mat4 jointTransform = jointTransforms[jointIndex];
-		vec4 posePosition = jointTransform * pmodel * vec4(in_position, 1.0);
+		mat4 transform = jointTransform * pmodel;
+		mat3 T = mat3(transpose(inverse(transform)));
+
+		vec4 posePosition = transform * vec4(in_position, 1.0);
 		totalLocalPos += posePosition;
 
-		vec4 worldNormal = jointTransform * vec4(in_normal, 0.0);
-		totalNormal += worldNormal;
+		vec4 worldNormal = vec4(T * in_normal, 0.0);
+		totalNormal = normalize(worldNormal);
 	}
 	else
 	{
@@ -45,10 +48,13 @@ void main(void)
 			//if (index == 0) continue;
 			mat4 jointTransform = jointTransforms[index];
 
-			vec4 posePosition = jointTransform * pmodel * vec4(in_position, 1.0);
+			mat4 transform = jointTransform * pmodel;
+			mat3 T = mat3(transpose(inverse(transform)));
+
+			vec4 posePosition = transform * vec4(in_position, 1.0);
 			totalLocalPos += posePosition * in_weights[i];
 		
-			vec4 worldNormal = jointTransform * vec4(in_normal, 0.0);
+			vec4 worldNormal = vec4(T * in_normal, 0.0);
 			totalNormal += worldNormal * in_weights[i];
 		}
 	}

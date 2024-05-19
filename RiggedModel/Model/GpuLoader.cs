@@ -1,5 +1,6 @@
 ﻿using OpenGL;
 using System;
+using static LSystem.RawModel3d;
 
 namespace LSystem
 {
@@ -67,7 +68,7 @@ namespace LSystem
         /// <param name="data">데이터의 배열</param>
         /// <param name="usage">GPU에서의 사용 용도</param>
         /// <returns>vbo를 반환</returns>
-        public static uint StoreDataInAttributeList(uint attributeNumber, int coordinateSize, float[] data, BufferUsage usage = BufferUsage.StaticDraw)
+        public static uint StoreDataInAttributeList(UNIFORM_LOCATION_ATRRIBUTE_NUMBER attributeNumber, int coordinateSize, float[] data, BufferUsage usage = BufferUsage.StaticDraw)
         {
             // VBO 생성
             uint vboID = Gl.GenBuffer();
@@ -77,7 +78,7 @@ namespace LSystem
             Gl.BufferData(BufferTarget.ArrayBuffer, (uint)(data.Length * sizeof(float)), data, usage);
 
             // 이전에 BindVertexArray한 VAO에 현재 Bind된 VBO를 attributeNumber 슬롯에 설정
-            Gl.VertexAttribPointer(attributeNumber, coordinateSize, VertexAttribType.Float, false, 0, IntPtr.Zero);
+            Gl.VertexAttribPointer((uint)attributeNumber, coordinateSize, VertexAttribType.Float, false, 0, IntPtr.Zero);
             //Gl.VertexArrayVertexBuffer(glVertexArrayVertexBuffer, vboID, )
 
             // GPU 메모리 조작이 필요 없다면 다음과 같이 바인딩 해제
@@ -86,7 +87,7 @@ namespace LSystem
             return vboID;
         }
 
-        public static uint StoreDataInAttributeList(uint attributeNumber, int coordinateSize, uint[] data, BufferUsage usage = BufferUsage.StaticDraw)
+        public static uint StoreDataInAttributeList(UNIFORM_LOCATION_ATRRIBUTE_NUMBER attributeNumber, int coordinateSize, uint[] data, BufferUsage usage = BufferUsage.StaticDraw)
         {
             // VBO 생성
             uint vboID = Gl.GenBuffer();
@@ -96,7 +97,7 @@ namespace LSystem
             Gl.BufferData(BufferTarget.ArrayBuffer, (uint)(data.Length * sizeof(uint)), data, usage);
 
             // 이전에 BindVertexArray한 VAO에 현재 Bind된 VBO를 attributeNumber 슬롯에 설정
-            Gl.VertexAttribPointer(attributeNumber, coordinateSize, VertexAttribType.UnsignedInt, false, 0, IntPtr.Zero);
+            Gl.VertexAttribPointer((uint)attributeNumber, coordinateSize, VertexAttribType.UnsignedInt, false, 0, IntPtr.Zero);
             //Gl.VertexArrayVertexBuffer(glVertexArrayVertexBuffer, vboID, )
 
             // GPU 메모리 조작이 필요 없다면 다음과 같이 바인딩 해제
