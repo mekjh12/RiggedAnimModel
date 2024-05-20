@@ -6,90 +6,123 @@ namespace LSystem.Animate
 {
     class Clothes
     {
-        public static TexturedModel WearAssignWeightTransfer(List<TexturedModel> skinModels, string clothFileName)
+        public static TexturedModel WearAssignWeightTransfer(TexturedModel skinModel, string clothFileName)
         {
             TexturedModel texturedModel = AniXmlLoader.LoadOnlyGeometryMesh(clothFileName);
 
-            foreach (TexturedModel skinModel in skinModels)
+            if (!skinModel.IsDrawElement)
             {
-                if (!skinModel.IsDrawElement)
+                Vertex3f[] vertices = skinModel.Vertices;
+
+                // AABB바운딩 구하기
+                float maxValue = float.MinValue;
+                float minValue = float.MaxValue;
+                for (int i = 0; i < vertices.Length; i++)
                 {
-                    Vertex3f[] vertices = skinModel.Vertices;
+                    maxValue = maxValue < vertices[i].z ? vertices[i].z : maxValue;
+                    minValue = minValue > vertices[i].z ? vertices[i].z : minValue;
+                }
+                float epsilon = 0.3f * (maxValue - minValue);
 
-                    // AABB바운딩 구하기
-                    float maxValue = float.MinValue;
-                    float minValue = float.MaxValue;
-                    for (int i = 0; i < vertices.Length; i++)
-                    {
-                        maxValue = maxValue < vertices[i].z ? vertices[i].z : maxValue;
-                        minValue = minValue > vertices[i].z ? vertices[i].z : minValue;
-                    }
-                    float epsilon = 0.3f * (maxValue - minValue);
+                int numTriangle = vertices.Length / 3;
 
+                // t,u,v구하는 역행렬 구하기 
+                Matrix3x3f[] invMat = new Matrix3x3f[numTriangle];
+                for (int i = 0; i < numTriangle; i++)
+                {
+                    Vertex3f v1 = vertices[3 * i + 0];
+                    Vertex3f v2 = vertices[3 * i + 1];
+                    Vertex3f v3 = vertices[3 * i + 2];
+                    Vertex3f e1 = v2 - v1;
+                    Vertex3f e2 = v3 - v1;
+                    Vertex3f d = e1.Cross(e2);
+                    Matrix3x3f m = Matrix3x3f.Identity;
+                    m[0, 0] = -d.x; m[0, 1] = -d.y; m[0, 2] = -d.z;
+                    m[1, 0] = e1.x; m[1, 1] = e1.y; m[1, 2] = e1.z;
+                    m[2, 0] = e2.x; m[2, 1] = e2.y; m[2, 2] = e2.z;
+                    invMat[i] = (m * 1000.0f).Inverse * 1000.0f;
+                }
+                Console.WriteLine("invMat complete.");
 
-                    int numTriangle = vertices.Length / 3;
-                    float[] map = new float[texturedModel.Vertices.Length];
-                    int[] mapIndex = new int[texturedModel.Vertices.Length];
+                //
+                Vertex3f[] clothPoints = texturedModel.Vertices;
 
-                    // t,u,v구하는 역행렬 구하기 
-                    Matrix3x3f[] invMat = new Matrix3x3f[numTriangle];
+                float[] mapValue = new float[texturedModel.Vertices.Length];
+                int[] mapIndex = new int[texturedModel.Vertices.Length];
+                for (int j = 0; j < clothPoints.Length; j++)
+                {
+                    mapValue[j] = float.MaxValue;
+                    mapIndex[j] = -1;
+                }
+
+                List<Vertex4i> lstBoneIndex = new List<Vertex4i>();
+                List<Vertex4f> lstBoneWeight = new List<Vertex4f>();
+                Vertex3f[] tuv = new Vertex3f[clothPoints.Length];
+
+                for (int j = 0; j < clothPoints.Length; j++)
+                {
+                    Vertex3f clothPoint = clothPoints[j];
+                    float min = float.MaxValue;
+                    int minIndex = 0;
                     for (int i = 0; i < numTriangle; i++)
                     {
                         Vertex3f v1 = vertices[3 * i + 0];
                         Vertex3f v2 = vertices[3 * i + 1];
                         Vertex3f v3 = vertices[3 * i + 2];
-                        Vertex3f e1 = v2 - v1;
-                        Vertex3f e2 = v3 - v1;
-                        Vertex3f d = e1.Cross(e2);
-                        Matrix3x3f m = Matrix3x3f.Identity;
-                        m[0, 0] = -d.x;
-                        m[0, 1] = -d.y;
-                        m[0, 2] = -d.z;
-                        m[1, 0] = e1.x;
-                        m[1, 1] = e1.y;
-                        m[1, 2] = e1.z;
-                        m[2, 0] = e2.x;
-                        m[2, 1] = e2.y;
-                        m[2, 2] = e2.z;
+                        Vertex3f res = invMat[i] * (clothPoint - v1);
 
-                        invMat[i] = (m * 1000.0f).Inverse * 1000.0f;
-                    }
+                        float t = res.x;
+                        float u = res.y;
+                        float v = res.z;
 
-                    //
-                    Vertex3f[] clothPoints = texturedModel.Vertices;
-                    for (int j = 0; j < clothPoints.Length; j++) 
-                        map[j] = float.MaxValue;
-
-                    for (int j = 0; j < clothPoints.Length; j++)
-                    {
-                        Vertex3f clothPoint = clothPoints[j];
-                        for (int i = 0; i < numTriangle; i++)
+                        float distance = Math.Min((clothPoint - v3).Norm(), Math.Min((clothPoint - v1).Norm(), (clothPoint - v2).Norm()));
+                        if (distance < min && t > 0)
                         {
-                            Vertex3f v1 = vertices[3 * i + 0];
-                            Vertex3f res = invMat[i] * (clothPoint - v1);
-                            float t = res.x;
-                            float u = res.y;
-                            float v = res.z;
-                            if (t < 0 && u + v < 1 && u > 0 && v > 0 && u < 1 && v < 1)
-                            {
-                                if (map[j] > -t)
-                                {
-                                    map[j] = -t;
-                                    mapIndex[j] = i;
-                                }
-                            }
+                            minIndex = i;
+                            min = distance;
                         }
 
-                        //texturedModel.BoneIndex(j, new Vertex4i(5, 4, 0, 0));// skinModel.BoneIndices[mapIndex[j]]);
-                        //texturedModel.BoneWeight(j, new Vertex4f(0.5f, 0.5f, 0, 0));// skinModel.BoneWeights[mapIndex[j]]);
+                        if (t < 0 && u + v < 1 && u > 0 && v > 0 && u < 1 && v < 1)
+                        {
+                            if (mapValue[j] < t)
+                            {
+                                mapValue[j] = t;
+                                mapIndex[j] = i;
+                                tuv[j] = new Vertex3f(t, u, v);
+                            }
+                        }
                     }
+
+                    if (mapIndex[j] == -1)
+                    {
+                        mapIndex[j] = minIndex;
+                    }
+
+                    if (j % 100 == 0) Console.WriteLine($"{j}/{clothPoints.Length}");
+                    int bestSkinTriangle = mapIndex[j];
+
+                    lstBoneIndex.Add(skinModel.BoneIndices[3 * bestSkinTriangle]);
+                    lstBoneWeight.Add(skinModel.BoneWeights[3 * bestSkinTriangle]);
                 }
 
+                texturedModel.Init(boneIndex: lstBoneIndex.ToArray(), boneWeight: lstBoneWeight.ToArray());
                 texturedModel.GpuBind();
             }
+
             return texturedModel;
         }
 
+
+        /// <summary>
+        /// * 폴리곤을 표현하기 위한 삼각형들의 꼭짓점이 분리된 것들을 같은 위치의 버텍스를 같은 버텍스로 만든다.<br/>
+        /// * v1-v2-v2 와 v4-v5-v6 삼각형에서 v1=v4, v2=v6이 같으므로 하나의 v1, v2로만 폴리곤을 만든다.<br/>
+        /// </summary>
+        /// <param name="lstPositions"></param>
+        /// <param name="meshTriangles"></param>
+        /// <param name="pList"></param>
+        /// <param name="normals"></param>
+        /// <param name="map"></param>
+        /// <param name="expandValue"></param>
         private static void MergeOneTopology(List<Vertex3f> lstPositions, MeshTriangles meshTriangles,
             out List<Vertex3f> pList, out Vertex3f[] normals, out Dictionary<uint, uint> map,
             float expandValue = 0.0001f)
@@ -166,6 +199,16 @@ namespace LSystem.Animate
             }
         }
 
+        /// <summary>
+        /// 모델을 원점을 중심으로 팽창, 수축한다. 
+        /// </summary>
+        /// <param name="lstPositions"></param>
+        /// <param name="lstTexCoord"></param>
+        /// <param name="lstBoneIndex"></param>
+        /// <param name="lstBoneWeight"></param>
+        /// <param name="meshTriangles"></param>
+        /// <param name="expandValue">팽창이면 양수, 수축이면 음수를 지정한다.</param>
+        /// <returns></returns>
         public static RawModel3d Expand(List<Vertex3f> lstPositions, List<Vertex2f> lstTexCoord, 
             List<Vertex4i> lstBoneIndex, List<Vertex4f> lstBoneWeight,
             MeshTriangles meshTriangles, float expandValue = 0.0001f)

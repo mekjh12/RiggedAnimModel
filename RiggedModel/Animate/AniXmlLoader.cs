@@ -9,6 +9,16 @@ namespace LSystem.Animate
 {
     internal class AniXmlLoader
     {
+        public static Matrix4x4f LibraryVisualScenesRootTransform(XmlDocument xml)
+        {
+            XmlNodeList library_visual_scenes = xml.GetElementsByTagName("library_visual_scenes");
+            XmlNode nodes = library_visual_scenes[0];// ["visual_scene"];
+            string[] value = nodes.InnerText.Split(' ');
+            float[] items = new float[value.Length];
+            for (int i = 0; i < value.Length; i++) items[i] = float.Parse(value[i]);
+            return new Matrix4x4f(items).Transposed;
+        }
+
         public static TexturedModel LoadOnlyGeometryMesh(string filename)
         {
             XmlDocument xml = new XmlDocument();
@@ -21,6 +31,10 @@ namespace LSystem.Animate
 
             // (2) library_geometries = position, normal, texcoord, color
             List<MeshTriangles> meshes = AniXmlLoader.LibraryGeometris(xml, out List<Vertex3f> lstPositions, out List<Vertex2f> lstTexCoord, out List<Vertex3f> lstNormals);
+
+            //
+            Matrix4x4f transform = AniXmlLoader.LibraryVisualScenesRootTransform(xml);
+            //transform = Matrix4x4f.Identity;
 
             // 읽어온 정보의 인덱스를 이용하여 GPU에 데이터를 전송한다.
             List<TexturedModel> texturedModels = new List<TexturedModel>();
@@ -37,9 +51,9 @@ namespace LSystem.Animate
                     int idx = (int)meshTriangles.Vertices[i];
                     int tidx = (int)meshTriangles.Texcoords[i];
                     int nidx = (int)meshTriangles.Normals[i];
-                    lstVertices.Add(lstPositions[idx]);
+                    lstVertices.Add(transform.Multipy(lstPositions[idx]));
                     lstTexs.Add(lstTexCoord[tidx]);
-                    lstNors.Add(lstNormals[nidx]);
+                    lstNors.Add(transform.Multipy(lstNormals[nidx]));
                 }
 
                 RawModel3d _rawModel = new RawModel3d();
@@ -56,7 +70,7 @@ namespace LSystem.Animate
                 {
                     string effect = materialToEffect[meshTriangles.Material].Replace("#", "");
                     string imageName = (effectToImage[effect]);
-                    Console.WriteLine(imageName);
+                    Console.WriteLine($"load texture-image {imageName}");
                     if (textures.ContainsKey(imageName))
                     {
                         TexturedModel texturedModel = new TexturedModel(_rawModel, textures[imageName]);
@@ -207,117 +221,134 @@ namespace LSystem.Animate
             lstTexCoord = new List<Vertex2f>();
             lstNormals = new List<Vertex3f>();
 
+            uint pOffset = 0;
+            uint tOffset = 0;
+            uint nOffset = 0;
+
             XmlNodeList libraryGeometries = xml.GetElementsByTagName("library_geometries");
 
             if (libraryGeometries.Count > 0)
             {
                 XmlNode library_geometries = libraryGeometries[0];
-                XmlNode geometry = library_geometries["geometry"];
 
-                XmlNode vertices = geometry["mesh"]["vertices"];
-                string positionName = vertices["input"].Attributes["source"].Value;
-                string vertexName = positionName.Replace("-positions", "-vertices");
-                string normalName = positionName.Replace("-positions", "-normals");
-                string texcoordName = positionName.Replace("-positions", "-map-0");
-                string colorName = positionName.Replace("-positions", "-colors-Col");
-
-                foreach (XmlNode node in geometry["mesh"])
+                foreach (XmlNode geometry in library_geometries.ChildNodes)
                 {
-                    // 기본 데이터 source를 읽어옴.
-                    if (node.Name == "source")
+                    XmlNode vertices = geometry["mesh"]["vertices"];
+                    string positionName = vertices["input"].Attributes["source"].Value;
+                    string vertexName = positionName.Replace("-positions", "-vertices");
+                    string normalName = positionName.Replace("-positions", "-normals");
+                    string texcoordName = positionName.Replace("-positions", "-map-0");
+                    string colorName = positionName.Replace("-positions", "-colors-Col");
+
+                    foreach (XmlNode node in geometry["mesh"])
                     {
-                        // 소스텍스트로부터 실수 배열을 만든다.
-                        string sourcesId = node.Attributes["id"].Value.Replace(" ", "");
-                        string[] value = node["float_array"].InnerText.Split(' ');
-                        float[] items = new float[value.Length];
-                        for (int i = 0; i < value.Length; i++)
-                            items[i] = float.Parse(value[i]);
+                        uint pNum = 0;
+                        uint tNum = 0;
+                        uint nNum = 0;
 
-                        if ("#" + sourcesId == positionName)
+                        // 기본 데이터 source를 읽어옴.
+                        if (node.Name == "source")
                         {
-                            for (int i = 0; i < items.Length; i += 3)
+                            // 소스텍스트로부터 실수 배열을 만든다.
+                            string sourcesId = node.Attributes["id"].Value.Replace(" ", "");
+                            string[] value = node["float_array"].InnerText.Split(' ');
+                            float[] items = new float[value.Length];
+                            for (int i = 0; i < value.Length; i++)
+                                items[i] = float.Parse(value[i]);
+
+                            if ("#" + sourcesId == positionName)
                             {
-                                lstPositions.Add(new Vertex3f(items[i], items[i + 1], items[i + 2]));
+                                for (int i = 0; i < items.Length; i += 3)
+                                {
+                                    lstPositions.Add(new Vertex3f(items[i], items[i + 1], items[i + 2]));
+                                }
+                                pNum = (uint)(items.Length / 3);
                             }
-                        }
-                        else if ("#" + sourcesId == texcoordName)
-                        {
-                            for (int i = 0; i < items.Length; i += 2)
+                            else if ("#" + sourcesId == texcoordName)
                             {
-                                lstTexCoord.Add(new Vertex2f(items[i], 1.0f - items[i + 1]));
+                                for (int i = 0; i < items.Length; i += 2)
+                                {
+                                    lstTexCoord.Add(new Vertex2f(items[i], 1.0f - items[i + 1]));
+                                }
+                                tNum = (uint)(items.Length / 2);
                             }
-                        }
-                        else if ("#" + sourcesId == normalName)
-                        {
-                            for (int i = 0; i < items.Length; i += 3)
+                            else if ("#" + sourcesId == normalName)
                             {
-                                lstNormals.Add(new Vertex3f(items[i], items[i + 1], items[i + 2]));
+                                for (int i = 0; i < items.Length; i += 3)
+                                {
+                                    lstNormals.Add(new Vertex3f(items[i], items[i + 1], items[i + 2]));
+                                }
+                                nNum = (uint)(items.Length / 3);
                             }
-                        }
-                        else if ("#" + sourcesId == colorName)
-                        {
-                        }
-                    }
-
-                    // triangles만 처리
-                    if (node.Name == "triangles")
-                    {
-                        XmlNode triangles = node;
-
-                        int vertexOffset = -1;
-                        int normalOffset = -1;
-                        int texcoordOffset = -1;
-                        int colorOffset = -1;
-
-                        // offset 읽어온다. pos, tex, nor, color                        
-                        foreach (XmlNode input in triangles.ChildNodes)
-                        {
-                            if (input.Name == "input")
+                            else if ("#" + sourcesId == colorName)
                             {
-                                if (input.Attributes["semantic"].Value == "VERTEX")
-                                {
-                                    vertexName = input.Attributes["source"].Value;
-                                    vertexOffset = int.Parse(input.Attributes["offset"].Value);
-                                }
-                                if (input.Attributes["semantic"].Value == "NORMAL")
-                                {
-                                    normalName = input.Attributes["source"].Value;
-                                    normalOffset = int.Parse(input.Attributes["offset"].Value);
-                                }
-                                if (input.Attributes["semantic"].Value == "TEXCOORD")
-                                {
-                                    texcoordName = input.Attributes["source"].Value;
-                                    texcoordOffset = int.Parse(input.Attributes["offset"].Value);
-                                }
-                                if (input.Attributes["semantic"].Value == "COLOR")
-                                {
-                                    colorName = input.Attributes["source"].Value;
-                                    colorOffset = int.Parse(input.Attributes["offset"].Value);
-                                }
                             }
                         }
 
-                        XmlNode p = node["p"];
-                        string[] values = p.InnerText.Split(new char[] { ' ' });
-                        int total = (vertexOffset >= 0 ? 1 : 0) + (normalOffset >= 0 ? 1 : 0)
-                            + (texcoordOffset >= 0 ? 1 : 0) + (colorOffset >= 0 ? 1 : 0);
-
-                        for (int i = 0; i < values.Length; i += total)
+                        // triangles만 처리
+                        if (node.Name == "triangles")
                         {
-                            if (vertexOffset >= 0) lstVertexIndices.Add(uint.Parse(values[i + vertexOffset]));
-                            if (normalOffset >= 0) lstNormalIndices.Add(uint.Parse(values[i + normalOffset]));
-                            if (texcoordOffset >= 0) texcoordIndices.Add(uint.Parse(values[i + texcoordOffset]));
-                            //if (colorOffset >= 0) colorIndices.Add(uint.Parse(values[i + colorOffset]));
+                            XmlNode triangles = node;
+
+                            int vertexOffset = -1;
+                            int normalOffset = -1;
+                            int texcoordOffset = -1;
+                            int colorOffset = -1;
+
+                            // offset 읽어온다. pos, tex, nor, color                        
+                            foreach (XmlNode input in triangles.ChildNodes)
+                            {
+                                if (input.Name == "input")
+                                {
+                                    if (input.Attributes["semantic"].Value == "VERTEX")
+                                    {
+                                        vertexName = input.Attributes["source"].Value;
+                                        vertexOffset = int.Parse(input.Attributes["offset"].Value);
+                                    }
+                                    if (input.Attributes["semantic"].Value == "NORMAL")
+                                    {
+                                        normalName = input.Attributes["source"].Value;
+                                        normalOffset = int.Parse(input.Attributes["offset"].Value);
+                                    }
+                                    if (input.Attributes["semantic"].Value == "TEXCOORD")
+                                    {
+                                        texcoordName = input.Attributes["source"].Value;
+                                        texcoordOffset = int.Parse(input.Attributes["offset"].Value);
+                                    }
+                                    if (input.Attributes["semantic"].Value == "COLOR")
+                                    {
+                                        colorName = input.Attributes["source"].Value;
+                                        colorOffset = int.Parse(input.Attributes["offset"].Value);
+                                    }
+                                }
+                            }
+
+                            XmlNode p = node["p"];
+                            string[] values = p.InnerText.Split(new char[] { ' ' });
+                            int total = (vertexOffset >= 0 ? 1 : 0) + (normalOffset >= 0 ? 1 : 0)
+                                + (texcoordOffset >= 0 ? 1 : 0) + (colorOffset >= 0 ? 1 : 0);
+
+                            for (int i = 0; i < values.Length; i += total)
+                            {
+                                if (vertexOffset >= 0) lstVertexIndices.Add(pOffset + uint.Parse(values[i + vertexOffset]));
+                                if (texcoordOffset >= 0) texcoordIndices.Add(tOffset + uint.Parse(values[i + texcoordOffset]));
+                                if (normalOffset >= 0) lstNormalIndices.Add(nOffset + uint.Parse(values[i + normalOffset]));
+                                //if (colorOffset >= 0) colorIndices.Add(uint.Parse(values[i + colorOffset]));
+                            }
+
+                            pOffset += pNum;
+                            tOffset += tNum;
+                            nOffset += nNum;
+
+                            string materialName = node.Attributes["material"] != null ? node.Attributes["material"].Value : "";
+
+                            MeshTriangles triMesh = new MeshTriangles();
+                            triMesh.Material = materialName;
+                            triMesh.AddVertices(lstVertexIndices.ToArray());
+                            triMesh.AddTexCoords(texcoordIndices.ToArray());
+                            triMesh.AddNormals(lstNormalIndices.ToArray());
+                            meshTriangles.Add(triMesh);
                         }
-
-                        string materialName = node.Attributes["material"] != null ? node.Attributes["material"].Value : "";
-
-                        MeshTriangles tri = new MeshTriangles();
-                        tri.Material = materialName;
-                        tri.AddVertices(lstVertexIndices.ToArray());
-                        tri.AddTexCoords(texcoordIndices.ToArray());
-                        tri.AddNormals(lstNormalIndices.ToArray());
-                        meshTriangles.Add(tri);
                     }
                 }
             }
@@ -347,175 +378,181 @@ namespace LSystem.Animate
             if (libraryControllers.Count > 0)
             {
                 XmlNode libraryController = libraryControllers[0];
-                XmlNode geometry = libraryController["controller"];
-                XmlNode joints = geometry["skin"]["joints"];
-                XmlNode vertex_weights = geometry["skin"]["vertex_weights"];
 
-                string[] eles = geometry["skin"]["bind_shape_matrix"].InnerText.Split(' ');
-                float[] eleValues = new float[eles.Length];
-                for (int i = 0; i < eles.Length; i++)
-                    eleValues[i] = float.Parse(eles[i]);
-
-                bindShapeMatrix = new Matrix4x4f(eleValues).Transposed;
-
-                // joints 읽어옴.
-                foreach (XmlNode input in joints.ChildNodes)
+                foreach (XmlNode controller in libraryController.ChildNodes)
                 {
-                    if (input.Name == "input")
+                    XmlNode joints = controller["skin"]["joints"];
+                    XmlNode vertex_weights = controller["skin"]["vertex_weights"];
+
+                    string[] eles = controller["skin"]["bind_shape_matrix"].InnerText.Split(' ');
+                    float[] eleValues = new float[eles.Length];
+                    for (int i = 0; i < eles.Length; i++)
+                        eleValues[i] = float.Parse(eles[i]);
+
+                    bindShapeMatrix = new Matrix4x4f(eleValues).Transposed;
+
+                    // joints 읽어옴.
+                    foreach (XmlNode input in joints.ChildNodes)
                     {
-                        // name 가져오기
-                        if (input.Attributes["semantic"].Value == "JOINT")
+                        if (input.Name == "input")
                         {
-                            jointsName = input.Attributes["source"].Value;
-                        }
-                        if (input.Attributes["semantic"].Value == "INV_BIND_MATRIX")
-                        {
-                            inverseBindMatrixName = input.Attributes["source"].Value;
-                        }
-
-                        foreach (XmlNode source in geometry["skin"].ChildNodes)
-                        {
-                            if (source.Name == "source")
+                            // name 가져오기
+                            if (input.Attributes["semantic"].Value == "JOINT")
                             {
-                                string sourcesId = source.Attributes["id"].Value;
+                                jointsName = input.Attributes["source"].Value;
+                            }
+                            if (input.Attributes["semantic"].Value == "INV_BIND_MATRIX")
+                            {
+                                inverseBindMatrixName = input.Attributes["source"].Value;
+                            }
 
-                                if (source["Name_array"] != null)
+                            foreach (XmlNode source in controller["skin"].ChildNodes)
+                            {
+                                if (source.Name == "source")
                                 {
-                                    string[] value = source["Name_array"].InnerText.Split(' ');
+                                    string sourcesId = source.Attributes["id"].Value;
 
-                                    // BoneName가져오기
-                                    if ("#" + sourcesId == jointsName)
+                                    if (source["Name_array"] != null)
                                     {
-                                        boneNames.Clear();
-                                        boneNames.AddRange(value);
-                                    }
-                                }
+                                        string[] value = source["Name_array"].InnerText.Split(' ');
 
-                                if (source["float_array"] != null)
-                                {
-                                    string[] value = source["float_array"].InnerText.Split(' ');
-                                    float[] items = new float[value.Length];
-                                    for (int i = 0; i < value.Length; i++)
-                                        items[i] = float.Parse(value[i]);
-
-                                    // INV_BIND_MATRIX
-                                    if ("#" + sourcesId == inverseBindMatrixName)
-                                    {
-                                        for (int i = 0; i < items.Length; i += 16)
+                                        // BoneName가져오기
+                                        if ("#" + sourcesId == jointsName)
                                         {
-                                            List<float> mat = new List<float>();
-                                            for (int j = 0; j < 16; j++) mat.Add(items[i + j]);
-                                            Matrix4x4f bindpose = new Matrix4x4f(mat.ToArray());
-                                            invBindPoses.Add(boneNames[i / 16], bindpose.Transposed);
+                                            boneNames.Clear();
+                                            boneNames.AddRange(value);
+                                        }
+                                    }
+
+                                    if (source["float_array"] != null)
+                                    {
+                                        string[] value = source["float_array"].InnerText.Split(' ');
+                                        float[] items = new float[value.Length];
+                                        for (int i = 0; i < value.Length; i++)
+                                            items[i] = float.Parse(value[i]);
+
+                                        // INV_BIND_MATRIX
+                                        if ("#" + sourcesId == inverseBindMatrixName)
+                                        {
+                                            for (int i = 0; i < items.Length; i += 16)
+                                            {
+                                                List<float> mat = new List<float>();
+                                                for (int j = 0; j < 16; j++) mat.Add(items[i + j]);
+                                                Matrix4x4f bindpose = new Matrix4x4f(mat.ToArray());
+                                                if (!invBindPoses.ContainsKey(boneNames[i / 16]))
+                                                {
+                                                    invBindPoses.Add(boneNames[i / 16], bindpose.Transposed);
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                // vertex_weights 읽어옴.
-                foreach (XmlNode input in vertex_weights.ChildNodes)
-                {
-                    if (input.Name == "input")
+                    // vertex_weights 읽어옴.
+                    foreach (XmlNode input in vertex_weights.ChildNodes)
                     {
-                        // name 가져오기
-                        if (input.Attributes["semantic"].Value == "WEIGHT") weightName = input.Attributes["source"].Value;
-                        foreach (XmlNode source in geometry["skin"].ChildNodes)
+                        if (input.Name == "input")
                         {
-                            if (source.Name == "source")
+                            // name 가져오기
+                            if (input.Attributes["semantic"].Value == "WEIGHT") weightName = input.Attributes["source"].Value;
+                            foreach (XmlNode source in controller["skin"].ChildNodes)
                             {
-                                string sourcesId = source.Attributes["id"].Value;
-                                if (source["float_array"] != null)
+                                if (source.Name == "source")
                                 {
-                                    string[] value = source["float_array"].InnerText.Split(' ');
-                                    float[] items = new float[value.Length];
-                                    for (int i = 0; i < value.Length; i++)
-                                        items[i] = float.Parse(value[i]);
+                                    string sourcesId = source.Attributes["id"].Value;
+                                    if (source["float_array"] != null)
+                                    {
+                                        string[] value = source["float_array"].InnerText.Split(' ');
+                                        float[] items = new float[value.Length];
+                                        for (int i = 0; i < value.Length; i++)
+                                            items[i] = float.Parse(value[i]);
 
-                                    // WEIGHT
-                                    if ("#" + sourcesId == weightName) weightList.AddRange(items);
+                                        // WEIGHT
+                                        if ("#" + sourcesId == weightName) weightList.AddRange(items);
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                // vertex_weights - vcount, v 읽어옴.
-                XmlNode vcount = geometry["skin"]["vertex_weights"]["vcount"];
-                XmlNode v = geometry["skin"]["vertex_weights"]["v"];
-                string[] vcountArray = vcount.InnerText.Trim().Split(' ');
-                int[] vcountIntArray = new int[vcountArray.Length];
-                uint total = 0;
-                for (int i = 0; i < vcountArray.Length; i++)
-                {
-                    vcountIntArray[i] = int.Parse(vcountArray[i].Trim());
-                    total += (uint)vcountIntArray[i];
-                }
-
-                foreach (XmlNode input in geometry["skin"]["vertex_weights"].ChildNodes)
-                {
-                    if (input.Name == "input")
+                    // vertex_weights - vcount, v 읽어옴.
+                    XmlNode vcount = controller["skin"]["vertex_weights"]["vcount"];
+                    XmlNode v = controller["skin"]["vertex_weights"]["v"];
+                    string[] vcountArray = vcount.InnerText.Trim().Split(' ');
+                    int[] vcountIntArray = new int[vcountArray.Length];
+                    uint total = 0;
+                    for (int i = 0; i < vcountArray.Length; i++)
                     {
-                        if (input.Attributes["semantic"].Value == "JOINT") jointsOffset = int.Parse(input.Attributes["offset"].Value);
-                        if (input.Attributes["semantic"].Value == "WEIGHT") weightOffset = int.Parse(input.Attributes["offset"].Value);
-                    }
-                }
-
-                string[] vArray = v.InnerText.Split(' ');
-                int sum = 0;
-                for (int i = 0; i < vcountIntArray.Length; i++)
-                {
-                    int vertexCount = vcountIntArray[i];
-                    List<int> boneIndexList = new List<int>();
-                    List<int> boneWeightList = new List<int>();
-
-                    for (int j = 0; j < vertexCount; j++)
-                    {
-                        if (jointsOffset >= 0)
-                            boneIndexList.Add(int.Parse(vArray[sum + 2 * j + jointsOffset].Trim()));
-                        if (weightOffset >= 0)
-                            boneWeightList.Add(int.Parse(vArray[sum + 2 * j + weightOffset].Trim()));
+                        vcountIntArray[i] = int.Parse(vcountArray[i].Trim());
+                        total += (uint)vcountIntArray[i];
                     }
 
-                    // 정렬하기
-                    List<Vertex2f> bwList = new List<Vertex2f>();
-                    for (int k = 0; k < boneWeightList.Count; k++)
+                    foreach (XmlNode input in controller["skin"]["vertex_weights"].ChildNodes)
                     {
-                        float w = weightList[boneWeightList[k]];
-                        bwList.Add(new Vertex2f(boneIndexList[k], w));
-                    }
-
-                    bwList.Sort((a, b) => b.y.CompareTo(a.y));
-                    if (bwList.Count > 4)
-                    {
-                        for (int k = 4; k < bwList.Count; k++)
+                        if (input.Name == "input")
                         {
-                            bwList[0] = new Vertex2f(bwList[0].x, bwList[0].y + bwList[k].y);
+                            if (input.Attributes["semantic"].Value == "JOINT") jointsOffset = int.Parse(input.Attributes["offset"].Value);
+                            if (input.Attributes["semantic"].Value == "WEIGHT") weightOffset = int.Parse(input.Attributes["offset"].Value);
                         }
-                        bwList.RemoveRange(4, bwList.Count - 4);
                     }
 
-                    // 정렬된 가중치 정보를 리스트에 담는다.
-                    Vertex4i jointId = Vertex4i.Zero;
-                    Vertex4f weight = Vertex4f.Zero;
-
-                    for (int k = 0; k < bwList.Count; k++)
+                    string[] vArray = v.InnerText.Split(' ');
+                    int sum = 0;
+                    for (int i = 0; i < vcountIntArray.Length; i++)
                     {
-                        if (k == 0) jointId.x = (int)bwList[k].x;
-                        if (k == 1) jointId.y = (int)bwList[k].x;
-                        if (k == 2) jointId.z = (int)bwList[k].x;
-                        if (k == 3) jointId.w = (int)bwList[k].x;
-                        if (k == 0) weight.x = bwList[k].y;
-                        if (k == 1) weight.y = bwList[k].y;
-                        if (k == 2) weight.z = bwList[k].y;
-                        if (k == 3) weight.w = bwList[k].y;
-                    }
+                        int vertexCount = vcountIntArray[i];
+                        List<int> boneIndexList = new List<int>();
+                        List<int> boneWeightList = new List<int>();
 
-                    lstBoneIndex.Add(jointId);
-                    lstBoneWeight.Add(weight);
-                    sum += 2 * vertexCount;
+                        for (int j = 0; j < vertexCount; j++)
+                        {
+                            if (jointsOffset >= 0)
+                                boneIndexList.Add(int.Parse(vArray[sum + 2 * j + jointsOffset].Trim()));
+                            if (weightOffset >= 0)
+                                boneWeightList.Add(int.Parse(vArray[sum + 2 * j + weightOffset].Trim()));
+                        }
+
+                        // 정렬하기
+                        List<Vertex2f> bwList = new List<Vertex2f>();
+                        for (int k = 0; k < boneWeightList.Count; k++)
+                        {
+                            float w = weightList[boneWeightList[k]];
+                            bwList.Add(new Vertex2f(boneIndexList[k], w));
+                        }
+
+                        bwList.Sort((a, b) => b.y.CompareTo(a.y));
+                        if (bwList.Count > 4)
+                        {
+                            for (int k = 4; k < bwList.Count; k++)
+                            {
+                                bwList[0] = new Vertex2f(bwList[0].x, bwList[0].y + bwList[k].y);
+                            }
+                            bwList.RemoveRange(4, bwList.Count - 4);
+                        }
+
+                        // 정렬된 가중치 정보를 리스트에 담는다.
+                        Vertex4i jointId = Vertex4i.Zero;
+                        Vertex4f weight = Vertex4f.Zero;
+
+                        for (int k = 0; k < bwList.Count; k++)
+                        {
+                            if (k == 0) jointId.x = (int)bwList[k].x;
+                            if (k == 1) jointId.y = (int)bwList[k].x;
+                            if (k == 2) jointId.z = (int)bwList[k].x;
+                            if (k == 3) jointId.w = (int)bwList[k].x;
+                            if (k == 0) weight.x = bwList[k].y;
+                            if (k == 1) weight.y = bwList[k].y;
+                            if (k == 2) weight.z = bwList[k].y;
+                            if (k == 3) weight.w = bwList[k].y;
+                        }
+
+                        lstBoneIndex.Add(jointId);
+                        lstBoneWeight.Add(weight);
+                        sum += 2 * vertexCount;
+                    }
                 }
             }
         }

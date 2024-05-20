@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Windows;
 using System.Xml;
 
 namespace LSystem.Animate
@@ -11,7 +12,7 @@ namespace LSystem.Animate
         string _filename; // dae
         MotionStorage _motions;
         List<TexturedModel> _texturedModels;
-        List<TexturedModel> _bodyTexturedModel; // 모델중에서 나체를 지정한다.
+        TexturedModel _bodyTexturedModel; // 모델중에서 나체를 지정한다.
         Bone _rootBone;
         
         Dictionary<string, Bone> _dicBones;
@@ -56,7 +57,7 @@ namespace LSystem.Animate
 
         public List<TexturedModel> Models => _texturedModels;
 
-        public List<TexturedModel> BodyWeightModels => _bodyTexturedModel;
+        public TexturedModel BodyWeightModels => _bodyTexturedModel;
 
         /// <summary>
         /// 생성자
@@ -67,7 +68,7 @@ namespace LSystem.Animate
             _filename = filename;
 
             List<TexturedModel> models = LoadFile(filename);
-            _bodyTexturedModel = models;
+            _bodyTexturedModel = models[0];
 
             if (_texturedModels == null)
                 _texturedModels = new List<TexturedModel>();
@@ -233,56 +234,28 @@ namespace LSystem.Animate
             // 읽어온 정보의 인덱스를 이용하여 GPU에 데이터를 전송한다.
             List<TexturedModel> texturedModels = new List<TexturedModel>();
             foreach (MeshTriangles meshTriangles in meshes)
-            {
-                int count = meshTriangles.Vertices.Count;
-                float[] positions = new float[count * 3];
-                float[] texcoords = new float[count * 2];
-                float[] normals = new float[count * 3];
-                uint[] boneIndices = new uint[count * 4];
-                float[] boneWeights = new float[count * 4];
-                for (int i = 0; i < count; i++)
-                {
-                    int idx = (int)meshTriangles.Vertices[i];
-                    int tidx = (int)meshTriangles.Texcoords[i];
-                    int nidx = (int)meshTriangles.Normals[i];
-
-                    positions[3 * i + 0] = lstPositions[idx].x;
-                    positions[3 * i + 1] = lstPositions[idx].y;
-                    positions[3 * i + 2] = lstPositions[idx].z;
-
-                    texcoords[2 * i + 0] = lstTexCoord[tidx].x;
-                    texcoords[2 * i + 1] = lstTexCoord[tidx].y;
-
-                    normals[3 * i + 0] = lstNormals[nidx].x;
-                    normals[3 * i + 1] = lstNormals[nidx].y;
-                    normals[3 * i + 2] = lstNormals[nidx].z;
-
-                    boneIndices[4 * i + 0] = (uint)lstBoneIndex[idx].x;
-                    boneIndices[4 * i + 1] = (uint)lstBoneIndex[idx].y;
-                    boneIndices[4 * i + 2] = (uint)lstBoneIndex[idx].z;
-                    boneIndices[4 * i + 3] = (uint)lstBoneIndex[idx].w;
-
-                    boneWeights[4 * i + 0] = (float)lstBoneWeight[idx].x;
-                    boneWeights[4 * i + 1] = (float)lstBoneWeight[idx].y;
-                    boneWeights[4 * i + 2] = (float)lstBoneWeight[idx].z;
-                    boneWeights[4 * i + 3] = (float)lstBoneWeight[idx].w;
-                }
-
+            {                
                 // 로딩한 postions, boneIndices, boneWeights를 버텍스로
                 List<Vertex3f> _vertices = new List<Vertex3f>();
                 List<Vertex2f> _texcoords = new List<Vertex2f>();
                 List<Vertex3f> _normals = new List<Vertex3f>();
                 List<Vertex4i> _boneIndices = new List<Vertex4i>();
                 List<Vertex4f> _boneWeights = new List<Vertex4f>();
-                for (int i = 0; i < count; i++)
-                {
-                    _vertices.Add(new Vertex3f(positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2]));
-                    _texcoords.Add(new Vertex2f(texcoords[i * 2 + 0], texcoords[i * 2 + 1]));
-                    _normals.Add(new Vertex3f(normals[i * 3 + 0], normals[i * 3 + 1], normals[i * 3 + 2]));
-                    _boneIndices.Add(new Vertex4i((int)boneIndices[i * 4 + 0], (int)boneIndices[i * 4 + 1], 
-                            (int)boneIndices[i * 4 + 2], (int)boneIndices[i * 4 + 3]));
-                    _boneWeights.Add(new Vertex4f(boneWeights[i * 4 + 0], boneWeights[i * 4 + 1], boneWeights[i * 4 + 2], boneWeights[i * 4 + 3]));
-                }
+
+                for (int i = 0; i < meshTriangles.Vertices.Count; i++)
+                    _vertices.Add(lstPositions[(int)meshTriangles.Vertices[i]]);
+
+                for (int i = 0; i < meshTriangles.Texcoords.Count; i++)
+                    _texcoords.Add(lstTexCoord[(int)meshTriangles.Texcoords[i]]);
+
+                for (int i = 0; i < meshTriangles.Normals.Count; i++)
+                    _normals.Add(lstNormals[(int)meshTriangles.Normals[i]]);
+
+                for (int i = 0; i < meshTriangles.Vertices.Count; i++)
+                    _boneIndices.Add(lstBoneIndex[(int)meshTriangles.Vertices[i]]);
+
+                for (int i = 0; i < meshTriangles.Vertices.Count; i++)
+                    _boneWeights.Add(lstBoneWeight[(int)meshTriangles.Vertices[i]]);
 
                 RawModel3d _rawModel = new RawModel3d();
                 _rawModel.Init(vertices: _vertices.ToArray(), texCoords: _texcoords.ToArray(), normals: _normals.ToArray(), 

@@ -33,7 +33,6 @@ namespace LSystem
         List<ColorPoint> _point;
         Vertex3f _ikPoint = new Vertex3f(0.6f, 0.0f, 1.8f);
         Vertex3f _centerPoint = new Vertex3f(0.0f, 0.0f, 0.0f);
-        float _theta = 0.0f;
 
         Vertex3f _bgColor = new Vertex3f(0.1f, 0.1f, 0.1f);
 
@@ -117,8 +116,6 @@ namespace LSystem
                     _humanAniModel.SetMotion(xmlDae.Motions.DefaultMotion.Name);
                     _selectedAniModel = _humanAniModel;
                 }
-                //this.cbCharacter.Text = "heroNasty.dae"; // xmlDae.DefaultMotion.Name;
-                //this.cbAction.Text = (string)this.cbAction.Items[0];
             }
 
             // 아이템 읽기
@@ -212,27 +209,17 @@ namespace LSystem
                 }
 
                 _point = new List<ColorPoint>();
-
                 _humanAniModel.Update(deltaTime);
-                //_aniModel1.Update(deltaTime);
 
                 if (_isIkApply)
                 {
                     Bone boneEnd = _humanAniModel.GetBoneByName(this.cbBone.Text);
                     if (boneEnd != null)
                     {
-                        if (_humanAniModel.Animator.IsPlaying)
-                        {
-                            _theta += 0.1f;
-                            //Form3D._rot++;
-                        }
-
                         Vertex3f ikpoint = _humanAniModel.GetEntity("main").ModelMatrix.Inverse.Multipy(_ikPoint);
-
                         _point.AddRange(Kinetics.IKSolvedByFABRIK(target: ikpoint, boneEnd, 
                             chainLength: (int)this.nmChainLength.Value,
                             iternations: (int)this.nmIternation.Value));
-
                     }
                 }
 
@@ -1033,9 +1020,18 @@ namespace LSystem
 
         private void button12_Click_3(object sender, EventArgs e)
         {
-            string fn = EngineLoop.PROJECT_PATH + "\\Res\\Items\\Maguganjigi_Upper.dae";
+            string fn = EngineLoop.PROJECT_PATH + "\\Res\\Items\\Satto_Upper.dae";
             TexturedModel texturedModel = Clothes.WearAssignWeightTransfer(xmlDae.BodyWeightModels, fn);
-            _humanAniModel.Attach("Maguganjigi_Upper", texturedModel);
+            _humanAniModel.Attach("Satto_Upper", texturedModel);
+            _humanAniModel.Attach(EngineLoop.PROJECT_PATH + "\\Res\\Items\\Satto_Upper.dae"); //Merchant_Torso
+        }
+
+        private void button23_Click_1(object sender, EventArgs e)
+        {
+            string fn = EngineLoop.PROJECT_PATH + "\\Res\\Clothes\\Yangban_Upper.dae";
+            TexturedModel texturedModel = AniXmlLoader.LoadOnlyGeometryMesh(fn);
+            Entity entity = new Entity(Path.GetFileNameWithoutExtension(fn), texturedModel);
+            _humanAniModel.Attach(Mammal.BODY_PART.Head, entity);
         }
     }
 }

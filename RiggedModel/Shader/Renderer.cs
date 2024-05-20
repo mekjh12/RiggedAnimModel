@@ -30,7 +30,7 @@ namespace LSystem
 
             Gl.BindVertexArray(Axis.VAO);
             Gl.EnableVertexAttribArray(0);
-            Gl.EnableVertexAttribArray(2);
+            Gl.EnableVertexAttribArray(3);
 
             Matrix4x4f mat = (Matrix4x4f)localModel;
             Matrix4x4f scaled = Matrix4x4f.Scaled(0.3f * size, size, 0.5f * size);
@@ -40,7 +40,7 @@ namespace LSystem
             shader.LoadModelMatrix(mat * scaled);
             Gl.DrawArrays(PrimitiveType.Lines, 0, 6);
 
-            Gl.DisableVertexAttribArray(2);
+            Gl.DisableVertexAttribArray(3);
             Gl.DisableVertexAttribArray(0);
             Gl.BindVertexArray(0);
 
